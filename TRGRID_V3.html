@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>TR-GRID MASTER v79.0 | Siber Operasyon ve İnteraktif SCADA Merkezi</title>
+  <title>SantralMatik | EPİAŞ Gerçek Üretim Verisi</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1203,22 +1203,22 @@ setInterval(() => {
 
 <div id="epiasLoginOverlay" style="position:fixed;inset:0;z-index:1000001;background:rgba(1,4,9,.96);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);">
   <div style="width:min(520px,92vw);background:#07111f;border:1px solid #00d2ff;border-radius:10px;padding:26px;box-shadow:0 0 60px rgba(0,210,255,.18);font-family:'JetBrains Mono',monospace;color:#fff;">
-    <div style="font-family:Orbitron,sans-serif;color:#00d2ff;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">TR-GRID</div>
+    <div style="font-family:Orbitron,sans-serif;color:#00d2ff;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">SantralMatik</div>
     <div style="font-size:11px;color:#94a3b8;margin-bottom:20px;">EPİAŞ GERÇEK ÜRETİM VERİSİ BAĞLANTISI</div>
     <div style="display:grid;gap:10px;">
       <label style="font-size:10px;color:#94a3b8;">EPİAŞ E-POSTA ADRESİ</label>
-      <input id="epiasUser" type="text" autocomplete="username" placeholder="E-posta adresinizi girin" style="box-sizing:border-box;width:100%;padding:10px;background:#020817;border:1px solid #334155;border-radius:5px;color:#fff;font:12px 'JetBrains Mono';outline:none;">
+      <input id="epiasUser" type="text" autocomplete="username" placeholder="E-posta adresinizi giriniz" style="box-sizing:border-box;width:100%;padding:10px;background:#020817;border:1px solid #334155;border-radius:5px;color:#fff;font:12px 'JetBrains Mono';outline:none;">
       <label style="font-size:10px;color:#94a3b8;">EPİAŞ ŞİFRE</label>
       <input id="epiasPass" type="password" autocomplete="current-password" placeholder="Şifreniz" style="box-sizing:border-box;width:100%;padding:10px;background:#020817;border:1px solid #334155;border-radius:5px;color:#fff;font:12px 'JetBrains Mono';outline:none;">
       <input id="epiasDate" type="hidden">
       <button id="epiasConnectBtn" style="margin-top:8px;padding:12px;background:#00d2ff;color:#001018;border:0;border-radius:5px;font:700 11px 'JetBrains Mono';cursor:pointer;">EPİAŞ'A BAĞLAN VE VERİLERİ ÇEK</button>
       <div id="epiasMsg" style="white-space:pre-line;min-height:30px;font-size:10px;color:#f9d423;line-height:1.5;"></div>
       <div id="epiasElectricalInfo" style="margin-top:4px;padding:9px 10px;border:1px solid #123047;background:rgba(0,210,255,.045);border-radius:5px;color:#7dd3fc;font-size:9px;line-height:1.55;min-height:42px;box-sizing:border-box;transition:opacity .25s ease;">
-        ⚡ <span id="epiasElectricalInfoText">ELEKTRİK BİLGİSİ: Elektrik şebekelerinde nominal frekans 50 Hz'dir.</span>
+        ⚡ <span id="epiasElectricalInfoText">Elektrik şebekelerinde nominal frekans 50 Hz'dir.</span>
       </div>
     </div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1e293b;color:#64748b;font-size:9px;line-height:1.5;">
-      EPİAŞ'ın santral gerçek üretim servisi tamamlanmış önceki gün verisini sağlar. Veriler yerel TR-GRID sunucusu üzerinden çekilir.
+      EPİAŞ'ın santral gerçek üretim servisi tamamlanmış önceki gün verisini sağlar. Veriler SantralMatik sunucusu üzerinden çekilir.
     </div>
   </div>
 </div>
@@ -1293,14 +1293,17 @@ setInterval(() => {
   const electricalInfo = document.getElementById('epiasElectricalInfo');
   const electricalInfoText = document.getElementById('epiasElectricalInfoText');
   const electricalFacts = [
-    "Elektrik Bilgisi: Elektrik şebekelerinde nominal frekans 50 Hz'dir.",
-    'Elektrik Bilgisi: Gerilim yükseldikçe aynı güç için taşınması gereken akım azalır.',
-    'Elektrik Bilgisi: Transformatörler alternatif akımın gerilim seviyesini değiştirmek için kullanılır.',
-    'Elektrik Bilgisi: GES panelleri doğru akım üretir, inverter bu enerjiyi alternatif akıma dönüştürür.',
-    'Elektrik Bilgisi: Rüzgâr santrallerinde türbinin mekanik enerjisi jeneratör aracılığıyla elektriğe çevrilir.',
-    'Elektrik Bilgisi: Yüksek gerilim seviyeleri, elektrik enerjisinin uzak mesafelere daha düşük kayıpla taşınmasına yardımcı olur.',
-    'Elektrik Bilgisi: Şebeke frekansının dengede tutulması, üretim ile tüketimin sürekli olarak dengelenmesini gerektirir.',
-    'Elektrik Bilgisi: Topraklama, arıza akımlarının güvenli bir yoldan akmasını sağlayarak can ve mal güvenliğine katkı sağlar.'
+    "Elektrik şebekelerinde nominal frekans 50 Hz'dir.",
+    'Gerilim yükseldikçe aynı güç için taşınması gereken akım azalır.',
+    'Transformatörler alternatif akımın gerilim seviyesini değiştirmek için kullanılır.',
+    'GES panelleri doğru akım üretir, inverter bu enerjiyi alternatif akıma dönüştürür.',
+    'Rüzgâr santrallerinde türbinin mekanik enerjisi jeneratör aracılığıyla elektriğe çevrilir.',
+    'Yüksek gerilim seviyeleri, elektrik enerjisinin uzak mesafelere daha düşük kayıpla taşınmasına yardımcı olur.',
+    'Şebeke frekansının dengede tutulması, üretim ile tüketimin sürekli olarak dengelenmesini gerektirir.',
+    'Topraklama, arıza akımlarının güvenli bir yoldan akmasını sağlayarak can ve mal güvenliğine katkı sağlar.',
+    'Elektrik enerjisinin üretildiği yer ile tüketildiği yer arasındaki mesafe arttıkça iletim planlaması daha önemli hale gelir.',
+    'Kompanzasyon sistemleri, reaktif gücü dengeleyerek tesisin elektriksel verimliliğine katkı sağlar.',
+    'Devre kesiciler, aşırı akım ve kısa devre gibi durumlarda devreyi açarak ekipmanı korumaya yardımcı olur.'
   ];
   let electricalInfoIndex = 0;
   let electricalInfoTimer = null;
