@@ -2,7 +2,9 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>SantralMatik | EPİAŞ Gerçek Üretim Verisi</title>
+  <link rel="icon" type="image/png" href="santralmatik-logo.png">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -262,6 +264,111 @@
                    border-radius:4px; padding:3px 6px; color:#fff; font:700 10px 'JetBrains Mono',monospace;
                    box-shadow:0 0 10px rgba(0,0,0,.8); }
 #sourceFilters { top:14px !important; right:18px !important; }
+
+
+/* SANTRALMATİK MOBİL UYUMLULUK */
+@media (max-width: 768px) {
+  html, body { overflow:hidden; }
+  #map { width:100vw !important; height:100dvh !important; min-height:100dvh !important; }
+
+  #scadaHUD {
+    top:8px; left:8px; right:8px; width:auto;
+    display:grid; grid-template-columns:repeat(2, minmax(0,1fr));
+    gap:6px; padding:7px 8px; border-radius:7px;
+  }
+  .hud-block { min-width:0; }
+  .hud-title { font-size:7px; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .hud-val { font-size:11px; }
+  .hud-dot { width:6px; height:6px; margin-right:4px; }
+
+  #searchBoxWrapper {
+    top:116px; left:8px; right:8px; width:auto; box-sizing:border-box;
+    padding:6px 9px;
+  }
+  #citySearchInput { width:100%; min-width:0; font-size:10px; }
+  #searchDropdown { top:34px; max-height:180px; }
+
+  #mapDatePicker {
+    top:160px; left:8px; right:auto; max-width:calc(100vw - 16px);
+    padding:7px 8px;
+  }
+  #mapDateInput { width:145px; max-width:100%; }
+  #mapDateStatus { min-width:0; width:min(260px, calc(100vw - 32px)); box-sizing:border-box; }
+
+  #sourceFilters {
+    top:auto !important; right:8px !important; left:8px !important; bottom:8px;
+    display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:4px;
+    padding:5px; border-radius:7px; box-sizing:border-box;
+  }
+  .filter-btn { min-width:0; width:100%; padding:5px 3px; font-size:8px; gap:2px; }
+  .filter-btn span.sub-val { font-size:7px; }
+
+  #mapLegend {
+    left:8px; bottom:122px; max-width:calc(100vw - 16px); box-sizing:border-box;
+    padding:8px 10px; max-height:150px; overflow:auto;
+  }
+  .legend-title { font-size:8px; margin-bottom:5px; }
+  .legend-item { font-size:8px; gap:5px; margin-bottom:3px; }
+  .legend-circle { width:8px; height:8px; flex:0 0 auto; }
+
+  #resourceInfoModal { left:8px; right:8px; bottom:75px; width:auto; box-sizing:border-box; }
+
+  #selectionOverlay { padding:8px; overflow:auto; justify-content:flex-start; }
+  .selection-box {
+    width:min(100%, 680px); max-height:none; min-height:0;
+    box-sizing:border-box; flex-direction:column; gap:10px; padding:12px; margin:auto 0;
+  }
+  .selection-left, .selection-right { width:100%; min-width:0; box-sizing:border-box; }
+  .selection-right { min-height:220px; padding:10px; }
+  .selection-box h2 { font-size:20px !important; letter-spacing:2px !important; overflow-wrap:anywhere; }
+  .city-summary-card { padding:9px; gap:8px; }
+  #selCityTotal { font-size:17px !important; }
+  #plantButtons { max-height:34vh; }
+  .plant-btn { padding:9px 8px; font-size:9px; }
+  .zero-toggle-box { font-size:9px; }
+
+  #simOverlay { padding:10px; overflow-y:auto; overflow-x:hidden; }
+  #topBar { gap:8px; align-items:flex-start; }
+  #cityTitle { font-size:21px; letter-spacing:1.5px; overflow-wrap:anywhere; }
+  #plantInfo { font-size:9px; line-height:1.35; overflow-wrap:anywhere; }
+  #backBtn { padding:6px 8px; font-size:8px; flex:0 0 auto; }
+  .main-grid { flex-direction:column; height:auto; min-height:0; gap:10px; margin-top:5px; }
+  .flow-section { width:100%; min-width:0; box-sizing:border-box; }
+  .charts-section { width:100%; min-width:0; box-sizing:border-box; height:340px; padding:42px 8px 8px; }
+  .chart-title { left:8px; top:12px; font-size:8px; max-width:55%; line-height:1.3; }
+  .chart-controls { top:8px; right:8px; gap:3px; flex-wrap:wrap; justify-content:flex-end; max-width:42%; }
+  .ctrl-btn { padding:3px 5px; font-size:7px; }
+  #terminal { height:120px; font-size:9px; box-sizing:border-box; margin-top:10px; }
+
+  #epiasLoginOverlay { padding:12px; overflow:auto; }
+  #epiasLoginOverlay > div {
+    width:min(520px, 100%) !important; box-sizing:border-box; padding:18px !important;
+  }
+  #epiasLoginOverlay .login-logo {
+    width:88px; height:88px; object-fit:contain; display:block; margin:0 auto 10px;
+    border-radius:18px;
+  }
+  #epiasLoginOverlay .login-brand { text-align:center; font-size:18px !important; letter-spacing:2px !important; }
+  #epiasLoginOverlay .login-subtitle { text-align:center; font-size:9px !important; }
+  #epiasLoginOverlay input { font-size:11px !important; padding:10px !important; }
+  #epiasConnectBtn { font-size:9px !important; }
+  #epiasProgressWrap { margin-top:8px !important; }
+  #epiasProgressLabel { font-size:8px !important; }
+  #epiasProgressPercent { font-size:10px !important; }
+  #epiasElectricalInfo { font-size:8px !important; }
+}
+
+@media (max-width: 430px) {
+  #sourceFilters { grid-template-columns:repeat(2, minmax(0,1fr)); bottom:7px; }
+  #mapLegend { bottom:170px; max-height:125px; }
+  #mapDatePicker { top:160px; }
+  #searchBoxWrapper { top:116px; }
+  #scadaHUD { grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .hud-val { font-size:10px; }
+  .selection-box { padding:9px; }
+  .selection-right { min-height:190px; }
+  .charts-section { height:300px; }
+}
 
 </style>
 </head>
@@ -1203,8 +1310,9 @@ setInterval(() => {
 
 <div id="epiasLoginOverlay" style="position:fixed;inset:0;z-index:1000001;background:rgba(1,4,9,.96);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);">
   <div style="width:min(520px,92vw);background:#07111f;border:1px solid #00d2ff;border-radius:10px;padding:26px;box-shadow:0 0 60px rgba(0,210,255,.18);font-family:'JetBrains Mono',monospace;color:#fff;">
-    <div style="font-family:Orbitron,sans-serif;color:#00d2ff;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">SantralMatik</div>
-    <div style="font-size:11px;color:#94a3b8;margin-bottom:20px;">EPİAŞ GERÇEK ÜRETİM VERİSİ BAĞLANTISI</div>
+    <img class="login-logo" src="santralmatik-logo.png" alt="SantralMatik" style="width:96px;height:96px;object-fit:contain;display:block;margin:0 auto 10px;border-radius:20px;">
+    <div class="login-brand" style="font-family:Orbitron,sans-serif;color:#00d2ff;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">SantralMatik</div>
+    <div class="login-subtitle" style="font-size:11px;color:#94a3b8;margin-bottom:20px;">EPİAŞ GERÇEK ÜRETİM VERİSİ BAĞLANTISI</div>
     <div style="display:grid;gap:10px;">
       <label style="font-size:10px;color:#94a3b8;">EPİAŞ E-POSTA ADRESİ</label>
       <input id="epiasUser" type="text" autocomplete="username" placeholder="E-posta adresinizi giriniz" style="box-sizing:border-box;width:100%;padding:10px;background:#020817;border:1px solid #334155;border-radius:5px;color:#fff;font:12px 'JetBrains Mono';outline:none;">
@@ -1213,6 +1321,15 @@ setInterval(() => {
       <input id="epiasDate" type="hidden">
       <button id="epiasConnectBtn" style="margin-top:8px;padding:12px;background:#00d2ff;color:#001018;border:0;border-radius:5px;font:700 11px 'JetBrains Mono';cursor:pointer;">EPİAŞ'A BAĞLAN VE VERİLERİ ÇEK</button>
       <div id="epiasMsg" style="white-space:pre-line;min-height:30px;font-size:10px;color:#f9d423;line-height:1.5;"></div>
+      <div id="epiasProgressWrap" style="display:none;margin-top:2px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font:8px 'JetBrains Mono';color:#64748b;">
+          <span>İŞLEM İLERLEMESİ</span><span id="epiasProgressPercent" style="color:#00d2ff;font-weight:700;font-size:10px;">0%</span>
+        </div>
+        <div style="height:8px;background:#020817;border:1px solid #1e3a50;border-radius:999px;overflow:hidden;box-shadow:inset 0 0 8px rgba(0,0,0,.5);">
+          <div id="epiasProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#00d2ff,#10b981);border-radius:999px;transition:width .55s ease;box-shadow:0 0 10px rgba(0,210,255,.45);"></div>
+        </div>
+        <div id="epiasProgressLabel" style="margin-top:5px;font:8px 'JetBrains Mono';color:#64748b;">Başlatılıyor...</div>
+      </div>
       <div id="epiasElectricalInfo" style="margin-top:4px;padding:9px 10px;border:1px solid #123047;background:rgba(0,210,255,.045);border-radius:5px;color:#7dd3fc;font-size:9px;line-height:1.55;min-height:42px;box-sizing:border-box;transition:opacity .25s ease;">
         ⚡ <span id="epiasElectricalInfoText">Elektrik şebekelerinde nominal frekans 50 Hz'dir.</span>
       </div>
@@ -1288,6 +1405,23 @@ setInterval(() => {
   function setMsg(t, ok=false) {
     msg.textContent = t;
     msg.style.color = ok ? '#10b981' : '#f9d423';
+  }
+
+  const progressWrap = document.getElementById('epiasProgressWrap');
+  const progressBar = document.getElementById('epiasProgressBar');
+  const progressPercent = document.getElementById('epiasProgressPercent');
+  const progressLabel = document.getElementById('epiasProgressLabel');
+
+  function setProgress(value, label='') {
+    const v = Math.max(0, Math.min(100, Math.round(value)));
+    if (progressWrap) progressWrap.style.display = 'block';
+    if (progressBar) progressBar.style.width = v + '%';
+    if (progressPercent) progressPercent.textContent = v + '%';
+    if (progressLabel && label) progressLabel.textContent = label;
+  }
+
+  function hideProgress(delay=0) {
+    setTimeout(() => { if (progressWrap) progressWrap.style.display = 'none'; }, delay);
   }
 
   const electricalInfo = document.getElementById('epiasElectricalInfo');
@@ -1449,11 +1583,25 @@ setInterval(() => {
       'Harita verileri hazırlanıyor...',
       'Son kontroller yapılıyor...'
     ];
+    const progressStages = [
+      { pct: 8,  label: 'EPİAŞ sunucusuna bağlantı kuruluyor...' },
+      { pct: 20, label: 'Santral listesi hazırlanıyor...' },
+      { pct: 42, label: 'Üretim verileri alınıyor...' },
+      { pct: 64, label: 'Saatlik üretimler işleniyor...' },
+      { pct: 78, label: 'Türkiye toplam üretimi hesaplanıyor...' },
+      { pct: 90, label: 'Harita verileri hazırlanıyor...' },
+      { pct: 97, label: 'Son kontroller yapılıyor...' }
+    ];
     let waitIndex = 0;
+    let progressIndex = 0;
     setMsg(`${waitMessages[waitIndex]}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
+    setProgress(progressStages[0].pct, progressStages[0].label);
     const waitTimer = setInterval(() => {
       waitIndex = (waitIndex + 1) % waitMessages.length;
+      progressIndex = Math.min(progressIndex + 1, progressStages.length - 1);
+      const stage = progressStages[progressIndex];
       setMsg(`${waitMessages[waitIndex]}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
+      setProgress(stage.pct, stage.label);
     }, 3000);
 
     try {
@@ -1470,6 +1618,7 @@ setInterval(() => {
       if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
 
       const result = applyData(data);
+      setProgress(100, 'Veriler hazır. Harita güncelleniyor...');
       setMsg(
         `${targetDate} VERİLERİ AKTARILDI.\n${result.count} EPİAŞ üretim kaydı alındı.\n${result.matched} harita üzerindeki santral eşleştirildi.`,
         true
@@ -1483,6 +1632,7 @@ setInterval(() => {
       if (!keepOverlay) {
         setTimeout(() => {
           overlay.style.display = 'none';
+          hideProgress();
           if (typeof map !== 'undefined' && map.invalidateSize) map.invalidateSize();
         }, 900);
       }
@@ -1494,6 +1644,7 @@ setInterval(() => {
         'error',
         false
       );
+      setProgress(0, 'Veri alınamadı. Bağlantı kontrol ediliyor...');
       setMsg('EPİAŞ VERİSİ ALINAMADI:\n' + e.message);
       return false;
     } finally {
