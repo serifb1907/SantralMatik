@@ -2,11 +2,11 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>SantralMatik | Siber Operasyon ve İnteraktif SCADA Merkezi</title>
+  <title>TR-GRID MASTER v79.0 | Siber Operasyon ve İnteraktif SCADA Merkezi</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
@@ -61,6 +61,7 @@
     #searchDropdown::-webkit-scrollbar { width: 4px; }
     #searchDropdown::-webkit-scrollbar-thumb { background: var(--neon-blue); border-radius: 2px; }
 
+
     /* HARİTA ÜZERİ TARİH SEÇİMİ */
     #mapDatePicker {
       position:fixed; top:132px; left:18px; z-index:10000;
@@ -79,6 +80,7 @@
       width:150px; box-sizing:border-box;
     }
     #mapDateInput:focus { border-color:var(--neon-blue); box-shadow:0 0 8px rgba(0,210,255,.2); }
+    /* Chrome/Edge tarih takvim ikonunu belirgin beyaz göster */
     #mapDateInput::-webkit-calendar-picker-indicator {
       filter: invert(1) brightness(1.35);
       opacity: 1;
@@ -105,6 +107,7 @@
     #mapDateStatus.loading { color:#67e8f9; border-color:rgba(0,210,255,.55); }
     #mapDateStatus.success { color:#86efac; border-color:rgba(34,197,94,.5); }
     #mapDateStatus.error { color:#fca5a5; border-color:rgba(239,68,68,.5); }
+
 
     /* KAYNAK FİLTRELEME ÇUBUĞU */
     #sourceFilters {
@@ -251,14 +254,16 @@
     #resModalStats { background: rgba(255,255,255,0.03); border: 1px solid rgba(0, 210, 255, 0.15); border-radius: 4px; padding: 8px; font-size: 10px; color: var(--neon-yellow); line-height: 1.5; }
     .close-modal-btn { background: transparent; border: none; color: var(--neon-pink); font-weight: bold; cursor: pointer; font-size: 14px; }
   
-    #map { position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important;
-           min-height:100vh !important; display:block !important; visibility:visible !important;
-           opacity:1 !important; background:#03080f !important; z-index:1 !important; filter:none !important; }
-    #map .city-label { background:rgba(2,6,23,.88); border:1px solid rgba(0,210,255,.45);
-                       border-radius:4px; padding:3px 6px; color:#fff; font:700 10px 'JetBrains Mono',monospace;
-                       box-shadow:0 0 10px rgba(0,0,0,.8); }
-    #sourceFilters { top:14px !important; right:18px !important; }
-  </style>
+/* TR-GRID TEMIZ: bağımsız SVG harita */
+#map { position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important;
+       min-height:100vh !important; display:block !important; visibility:visible !important;
+       opacity:1 !important; background:#03080f !important; z-index:1 !important; filter:none !important; }
+#map .city-label { background:rgba(2,6,23,.88); border:1px solid rgba(0,210,255,.45);
+                   border-radius:4px; padding:3px 6px; color:#fff; font:700 10px 'JetBrains Mono',monospace;
+                   box-shadow:0 0 10px rgba(0,0,0,.8); }
+#sourceFilters { top:14px !important; right:18px !important; }
+
+</style>
 </head>
 <body>
 
@@ -340,6 +345,7 @@
   <div id="mapDateStatus" aria-live="polite"></div>
 </div>
 
+
 <!-- KAYNAK BİLGİLENDİRME MODALI -->
 <div id="resourceInfoModal">
   <div id="resModalTitle">
@@ -419,6 +425,7 @@
   <div id="terminal"></div>
 </div>
 
+
 <script>
 function cleanVal(v) {
   if (typeof v === "number") return isNaN(v) ? 0 : v;
@@ -489,7 +496,7 @@ const resourceIntel = {
   }
 };
 
-// KULLANICI VERİLERİ
+// KULLANICI VERİLERİ (Birebir Korundu)
 const rawCities = [
      {n:"ADANA", c:[36.99, 35.32], plants:[{p:"OMP ENERJİ YÜREĞİR BES", k:"biomass", v:175.82}, {p:"SEYHAN 1 HES", k:"river", v:1171.77}, {p:"TUFANBEYLİ TES", k:"coal", v:10848.27}, {p:"ITC ADANA ENERJİ", k:"biomass", v:24.40}, {p:"ITC ADANUS BES", k:"biomass", v:307.58}, {p:"ÇATALAN HES", k:"river", v:2648.41}]},
     {n:"ADIYAMAN", c:[37.76, 38.27], plants:[{p:"ÇAĞLAYAN HES ADIYAMAN", k:"river", v:14.27}]},
@@ -574,6 +581,7 @@ const rawCities = [
     {n:"ZONGULDAK", c:[41.45, 31.79], plants:[{p:"AMBARLIK1-2 HES", k:"river", v:75.72}, {p:"ANKUTSAN KOJENERASYON", k:"naturalGas", v:0.00}, {p:"ARMUTÇUK RES", k:"wind", v:1134.37}, {p:"ERDEMİR", k:"coal", v:2603.40}, {p:"FİLYOS ENERJİ", k:"naturalGas", v:84.80}, {p:"ZETES1", k:"coal", v:3806.00}, {p:"ZETES2", k:"coal", v:0.00}, {p:"ZETES3", k:"coal", v:28496.00}, {p:"ZONGULDAK RES", k:"wind", v:532.71}, {p:"ÇATALAĞZI TES", k:"coal", v:3191.00}, {p:"ÇAYCUMA SANTRALİ", k:"naturalGas", v:0.00}]}
 ];
 
+
 const allCities = rawCities.map(city => {
   let total = 0;
   let cleanPlants = city.plants.map(p => {
@@ -626,12 +634,15 @@ let currentSelectedCityIdx = null;
 
 // GERÇEK TEİAŞ 380 kV / 154 kV İLETİM ŞEBEKESİ KORİDORLARI
 const gridConnections = [
+  // Trakya & Marmara Sanayi Ringi
   { from: "ÇANAKKALE", to: "İSTANBUL", volt: "380 kV Çift Devre", desc: "Biga kömür termik ve rüzgar üretimini Trakya üzerinden İstanbul metropolüne taşır." },
   { from: "KIRKLARELİ", to: "İSTANBUL", volt: "380 kV", desc: "Hamitabat DGKÇ ve rüzgar enerjisinin Avrupa Yakası dağıtım baralarına aktarımı." },
   { from: "TEKİRDAĞ", to: "İSTANBUL", volt: "380 kV", desc: "Marmara Ereğlisi çevrim santralleri ile Trakya sanayi yükü transfer hattı." },
   { from: "BALIKESİR", to: "BURSA", volt: "380 kV", desc: "Güney Marmara RES koridoru ile Bandırma üretiminin Bursa otomotiv sanayisine iletimi." },
   { from: "BURSA", to: "KOCAELİ", volt: "380 kV", desc: "Bursa DGKÇ enerjisini Kocaeli ağır sanayi ve petrokimya havzasına bağlar." },
   { from: "KOCAELİ", to: "İSTANBUL", volt: "380 kV Yeraltı Kablosu", desc: "Asya-Avrupa enterkonneksiyonu; Gebze ve İzmit yükünü Anadolu Yakasına aktarır." },
+
+  // Batı Anadolu - Ege Ringi
   { from: "İZMİR", to: "MANİSA", volt: "380 kV", desc: "Aliağa enerji üssü (ithal kömür/DGKÇ/RES) ile Manisa Organize Sanayi aksı iletimi." },
   { from: "MANİSA", to: "BALIKESİR", volt: "380 kV", desc: "Soma termik havzasını Kuzey Ege ve Marmara ana omurgasına bağlayan transit hat." },
   { from: "AYDIN", to: "DENİZLİ", volt: "154 kV / 380 kV", desc: "Büyük Menderes Grabeni Jeotermal (JES) havzası enerjisinin Denizli sanayisine iletimi." },
@@ -639,18 +650,26 @@ const gridConnections = [
   { from: "MUĞLA", to: "AYDIN", volt: "380 kV", desc: "Yatağan ve Yeniköy kömür termik santrallerinin Ege şebekesine baz yük enjeksiyonu." },
   { from: "AFYONKARAHİSAR", to: "ESKİŞEHİR", volt: "380 kV", desc: "Ege-İç Anadolu elektrik koridoru; bölgesel yük transferi sağlar." },
   { from: "ESKİŞEHİR", to: "ANKARA", volt: "380 kV Çift Devre", desc: "Batı Anadolu enterkonnekte üretiminin Başkent tüketim merkezine aktarımı." },
+
+  // Karadeniz - İç Anadolu Enerji Koridoru
   { from: "ZONGULDAK", to: "ANKARA", volt: "380 kV Çift Devre", desc: "ZETES (2.790 MW) ve Çatalağzı kömür üretimini doğrudan İç Anadolu yük merkezine pompalar." },
   { from: "SAMSUN", to: "AMASYA", volt: "380 kV", desc: "Hasan Uğurlu HES ve Samsun DGKÇ üretimini Orta Karadeniz trafo merkezlerine dağıtır." },
   { from: "AMASYA", to: "YOZGAT", volt: "380 kV", desc: "Karadeniz hidroelektrik arzının İç Anadolu omurgasına transit transfer hattı." },
   { from: "YOZGAT", to: "ANKARA", volt: "380 kV", desc: "Orta ve Doğu Karadeniz elektrik üretiminin Başkente beslendiği ana hat." },
+
+  // Doğu Karadeniz Mega Hidro Koridoru
   { from: "ARTVİN", to: "ERZURUM", volt: "380 kV Çift Devre", desc: "Çoruh Havzası (Deriner, Yusufeli, Borçka) mega barajlarının 3.000+ MW hidroelektrik çıkış kapısı." },
   { from: "ERZURUM", to: "ERZİNCAN", volt: "380 kV", desc: "Doğu Anadolu hidro arzını batıya taşıyan ulusal yüksek gerilim otobanı." },
   { from: "ERZİNCAN", to: "SİVAS", volt: "380 kV", desc: "Doğu-Batı enerji koridoru; hidroelektrik arzı Sivas ana tevzi trafosuna iletilir." },
   { from: "SİVAS", to: "KAYSERİ", volt: "380 kV", desc: "Doğu Anadolu temiz hidro üretiminin Orta Anadolu sanayi merkezine transferi." },
+
+  // Fırat - Dicle & Güneydoğu Hidro Omurgası
   { from: "SİİRT", to: "DİYARBAKIR", volt: "380 kV", desc: "Çetin ve Alkumru HES santrallerinin Botan Vadisi'nden Güneydoğu şebekesine bağlantısı." },
   { from: "DİYARBAKIR", to: "MALATYA", volt: "380 kV", desc: "Karakaya HES ve Dicle havzası üretiminin Doğu Anadolu omurgasına transferi." },
   { from: "MALATYA", to: "KAYSERİ", volt: "380 kV Çift Devre", desc: "Keban ve Karakaya mega hidro santrallerinin elektriğini Batı'ya taşıyan ana omurga." },
   { from: "KAYSERİ", to: "ANKARA", volt: "380 kV Çift Devre", desc: "Türkiye'nin en kritik transit iletim hattı; Doğu'nun ucuz elektriğini Başkente taşır." },
+
+  // Akdeniz & Çukurova Enerji Ringi
   { from: "KAHRAMANMARAŞ", to: "GAZİANTEP", volt: "380 kV", desc: "Afşin-Elbistan ve baraj üretimlerinin Güneydoğu sanayisine tahliyesi." },
   { from: "HATAY", to: "ADANA", volt: "380 kV", desc: "İskenderun Körfezi ithal kömür TES (Atlas) üretiminin Çukurova baralarına aktarımı." },
   { from: "ADANA", to: "MERSİN", volt: "380 kV", desc: "Çukurova sanayi ve liman bölgesinin gerilim/reaktif güç dengeleme hattı." },
@@ -661,6 +680,7 @@ const gridConnections = [
   { from: "BURDUR", to: "AFYONKARAHİSAR", volt: "380 kV", desc: "Güney-Kuzey transit enerji koridoru; Akdeniz arzını İç Ege'ye bağlar." }
 ];
 
+// İLETİM HATLARI ÇİZİMİ (AKILLI FİLTRE DESTEKLİ)
 function drawGridLines() {
   gridLines.forEach(l => map.removeLayer(l));
   gridLines = [];
@@ -671,6 +691,7 @@ function drawGridLines() {
     const isFromVisible = visibleCityNames.includes(conn.from);
     const isToVisible = visibleCityNames.includes(conn.to);
 
+    // Yalnızca her iki uçtaki şehir de aktif filtrede ekranda ise çiz
     if (isFromVisible && isToVisible) {
       const c1 = allCities.find(c => c.n === conn.from);
       const c2 = allCities.find(c => c.n === conn.to);
@@ -811,6 +832,7 @@ function closeResourceInfo() {
   document.getElementById("resourceInfoModal").style.display = "none";
 }
 
+// TÜRKÇE KARAKTER DUYARLI NORMALİZASYON
 function normalizeTR(text) {
   if (!text) return "";
   return text
@@ -900,6 +922,7 @@ function handleCityClick(idx) {
     drawCityDonut(city);
 }
 
+// SANTRALLERİ EN ÇOKTAN EN AZA SIRALAYARAK LİSTELEME
 function renderPlantButtons() {
     if (currentSelectedCityIdx === null) return;
     const city = allCities[currentSelectedCityIdx];
@@ -912,6 +935,7 @@ function renderPlantButtons() {
       return;
     }
 
+    // Orijinal indeksleri koruyarak büyükten küçüğe sıralama
     const sortedPlantsWithOriginalIdx = city.plants
       .map((p, originalIdx) => ({ ...p, originalIdx }))
       .sort((a, b) => b.v - a.v);
@@ -987,6 +1011,7 @@ function openSim(cityIdx, plantIdx) {
         return;
       }
       
+      // Canlı görünümde günlük toplamı rastgele değiştirme. EPİAŞ verisini koru.
       const total = cleanVal(plant.v);
       document.getElementById("v1").innerText = total.toFixed(2) + " MWh";
       document.getElementById("textChartTotal").innerText = Math.round(total).toLocaleString('tr-TR');
@@ -1054,10 +1079,12 @@ function drawCityDonut(city) {
 }
 
 function drawTrendChart(plant) {
+    // EPİAŞ'ın gerçek 24 saatlik verisini kullan. Simülasyon/fake profil yok.
     const hours = Array.from({length: 24}, (_, i) => `${String(i).padStart(2,'0')}:00`);
     let values = Array.isArray(plant.hourly) ? plant.hourly.slice(0, 24).map(cleanVal) : [];
     while (values.length < 24) values.push(0);
 
+    // Günlük toplamı da saatlik veriden doğrula.
     const hourlyTotal = values.reduce((sum, v) => sum + v, 0);
     if (hourlyTotal > 0 || plant.v === 0) {
         plant.v = hourlyTotal;
@@ -1160,6 +1187,7 @@ function closeSim() {
     document.getElementById("selectionOverlay").style.display = "flex";
 }
 
+// CANLI TELEMETRİ GÖRSELİ: EPİAŞ üretim/toplam verilerini ezmez.
 setInterval(() => {
   const freq = (50.00 + (Math.random() * 0.06 - 0.03)).toFixed(2);
   const el = document.getElementById("hudFreq");
@@ -1175,24 +1203,29 @@ setInterval(() => {
 
 <div id="epiasLoginOverlay" style="position:fixed;inset:0;z-index:1000001;background:rgba(1,4,9,.96);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);">
   <div style="width:min(520px,92vw);background:#07111f;border:1px solid #00d2ff;border-radius:10px;padding:26px;box-shadow:0 0 60px rgba(0,210,255,.18);font-family:'JetBrains Mono',monospace;color:#fff;">
-    <div style="font-family:Orbitron,sans-serif;color:#00d2ff;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">SantralMatik</div>
+    <div style="font-family:Orbitron,sans-serif;color:#00d2ff;font-size:22px;font-weight:700;letter-spacing:3px;margin-bottom:6px;">TR-GRID</div>
     <div style="font-size:11px;color:#94a3b8;margin-bottom:20px;">EPİAŞ GERÇEK ÜRETİM VERİSİ BAĞLANTISI</div>
     <div style="display:grid;gap:10px;">
-      <label style="font-size:10px;color:#94a3b8;">EPİAŞ KULLANICI ADI</label>
-      <input id="epiasUser" type="text" autocomplete="username" placeholder="Kullanıcı adınız" style="box-sizing:border-box;width:100%;padding:10px;background:#020817;border:1px solid #334155;border-radius:5px;color:#fff;font:12px 'JetBrains Mono';outline:none;">
+      <label style="font-size:10px;color:#94a3b8;">EPİAŞ E-POSTA ADRESİ</label>
+      <input id="epiasUser" type="text" autocomplete="username" placeholder="E-posta adresinizi girin" style="box-sizing:border-box;width:100%;padding:10px;background:#020817;border:1px solid #334155;border-radius:5px;color:#fff;font:12px 'JetBrains Mono';outline:none;">
       <label style="font-size:10px;color:#94a3b8;">EPİAŞ ŞİFRE</label>
       <input id="epiasPass" type="password" autocomplete="current-password" placeholder="Şifreniz" style="box-sizing:border-box;width:100%;padding:10px;background:#020817;border:1px solid #334155;border-radius:5px;color:#fff;font:12px 'JetBrains Mono';outline:none;">
       <input id="epiasDate" type="hidden">
       <button id="epiasConnectBtn" style="margin-top:8px;padding:12px;background:#00d2ff;color:#001018;border:0;border-radius:5px;font:700 11px 'JetBrains Mono';cursor:pointer;">EPİAŞ'A BAĞLAN VE VERİLERİ ÇEK</button>
       <div id="epiasMsg" style="white-space:pre-line;min-height:30px;font-size:10px;color:#f9d423;line-height:1.5;"></div>
+      <div id="epiasElectricalInfo" style="margin-top:4px;padding:9px 10px;border:1px solid #123047;background:rgba(0,210,255,.045);border-radius:5px;color:#7dd3fc;font-size:9px;line-height:1.55;min-height:42px;box-sizing:border-box;transition:opacity .25s ease;">
+        ⚡ <span id="epiasElectricalInfoText">ELEKTRİK BİLGİSİ: Elektrik şebekelerinde nominal frekans 50 Hz'dir.</span>
+      </div>
     </div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid #1e293b;color:#64748b;font-size:9px;line-height:1.5;">
-      EPİAŞ'ın santral gerçek üretim servisi tamamlanmış önceki gün verisini sağlar. Veriler SantralMatik sunucusu üzerinden çekilir.
+      EPİAŞ'ın santral gerçek üretim servisi tamamlanmış önceki gün verisini sağlar. Veriler yerel TR-GRID sunucusu üzerinden çekilir.
     </div>
   </div>
 </div>
 
+
 <script>
+/* TR-GRID TEMIZ EPİAŞ KÖPRÜSÜ */
 (() => {
   const overlay = document.getElementById('epiasLoginOverlay');
   const btn = document.getElementById('epiasConnectBtn');
@@ -1222,7 +1255,7 @@ setInterval(() => {
     const parts = dateStr.split('-');
     return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : dateStr;
   }
-
+  // TR-GRID her açılışta Türkiye yerel saatine göre bugünden bir önceki günü seçer.
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const defaultDate = `${yesterday.getFullYear()}-${pad(yesterday.getMonth()+1)}-${pad(yesterday.getDate())}`;
@@ -1257,6 +1290,33 @@ setInterval(() => {
     msg.style.color = ok ? '#10b981' : '#f9d423';
   }
 
+  const electricalInfo = document.getElementById('epiasElectricalInfo');
+  const electricalInfoText = document.getElementById('epiasElectricalInfoText');
+  const electricalFacts = [
+    "Elektrik Bilgisi: Elektrik şebekelerinde nominal frekans 50 Hz'dir.",
+    'Elektrik Bilgisi: Gerilim yükseldikçe aynı güç için taşınması gereken akım azalır.',
+    'Elektrik Bilgisi: Transformatörler alternatif akımın gerilim seviyesini değiştirmek için kullanılır.',
+    'Elektrik Bilgisi: GES panelleri doğru akım üretir, inverter bu enerjiyi alternatif akıma dönüştürür.',
+    'Elektrik Bilgisi: Rüzgâr santrallerinde türbinin mekanik enerjisi jeneratör aracılığıyla elektriğe çevrilir.',
+    'Elektrik Bilgisi: Yüksek gerilim seviyeleri, elektrik enerjisinin uzak mesafelere daha düşük kayıpla taşınmasına yardımcı olur.',
+    'Elektrik Bilgisi: Şebeke frekansının dengede tutulması, üretim ile tüketimin sürekli olarak dengelenmesini gerektirir.',
+    'Elektrik Bilgisi: Topraklama, arıza akımlarının güvenli bir yoldan akmasını sağlayarak can ve mal güvenliğine katkı sağlar.'
+  ];
+  let electricalInfoIndex = 0;
+  let electricalInfoTimer = null;
+
+  function rotateElectricalInfo() {
+    if (!electricalInfoText) return;
+    electricalInfoText.style.opacity = '0';
+    setTimeout(() => {
+      electricalInfoIndex = (electricalInfoIndex + 1) % electricalFacts.length;
+      electricalInfoText.textContent = electricalFacts[electricalInfoIndex];
+      electricalInfoText.style.opacity = '1';
+    }, 180);
+  }
+
+  electricalInfoTimer = setInterval(rotateElectricalInfo, 4000);
+
   function groupOf(k) {
     if (k === 'wind') return 'wind';
     if (k === 'sun') return 'sun';
@@ -1284,10 +1344,12 @@ setInterval(() => {
     if (!key) return null;
     if (map.has(key)) return map.get(key);
 
+    // Önce güçlü prefix/contains eşleşmesi.
     for (const [k, v] of map) {
       if (key.length >= 7 && k.length >= 7 && (k.startsWith(key) || key.startsWith(k))) return v;
     }
 
+    // İsimler birebir aynı değilse token benzerliği. Yanlış eşleşmeleri önlemek için eşik yüksek tutuldu.
     let best = null, bestScore = 0;
     for (const [k, v] of map) {
       const score = similarity(key, k);
@@ -1318,6 +1380,7 @@ setInterval(() => {
           if (x.type && x.type !== 'unknown') p.k = x.type;
           matched++;
         } else {
+          // Haritada bulunmayan eski/hardcoded tesisleri sıfırlıyoruz, böylece ekranda sahte veri kalmıyor.
           p.v = 0;
           p.hourly = Array(24).fill(0);
           unmatched++;
@@ -1326,6 +1389,8 @@ setInterval(() => {
       city.totalMWh = city.plants.reduce((s,p) => s + num(p.v), 0);
     });
 
+    // Kenardaki toplamlar haritadaki birkaç bin tesisin toplamı değil, EPİAŞ'ın döndürdüğü
+    // bütün üretim kayıtlarının toplamıdır.
     const totals = {ALL:0,wind:0,sun:0,hydro:0,thermal:0,geothermal:0,biomass:0};
     let renewable = 0;
     plants.forEach(x => {
@@ -1439,6 +1504,8 @@ setInterval(() => {
     const selectedDate = mapDate.value;
     if (!selectedDate) return;
 
+    // EPİAŞ bağlantısı kurulmadıysa tarih sadece seçilir.
+    // Bağlantı kurulduysa tarih değişikliği gerçek veri sorgusunu hemen yeniler.
     date.value = selectedDate;
     if (epiasSession) {
       await fetchForDate(selectedDate, true);
