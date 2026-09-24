@@ -472,6 +472,53 @@
   #terminal { height: 125px !important; margin-top: 12px !important; }
 }
 
+
+/* SANTRALMATİK SON CİLA */
+#epiasMsg {
+  min-height: 52px !important;
+  height: 52px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  white-space: pre-line !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  line-height: 1.45 !important;
+}
+#epiasStatus > span:first-child {
+  background:#10b981 !important;
+  box-shadow:0 0 8px rgba(16,185,129,.7) !important;
+}
+.selection-right { justify-content: flex-start; }
+.selection-donut-wrap {
+  width:100%; height:300px; min-height:300px; flex:0 0 300px;
+  display:flex; align-items:center; justify-content:center;
+  box-sizing:border-box; margin:0 auto;
+}
+.selection-donut-wrap canvas {
+  display:block !important; width:100% !important; height:100% !important;
+  max-width:100% !important; max-height:100% !important;
+}
+@media (min-width:769px) {
+  .selection-right .selection-donut-wrap { margin-top:18px; }
+}
+@media (max-width:768px) {
+  #epiasMsg { height:52px !important; min-height:52px !important; font-size:9px !important; }
+  .selection-right { padding:10px !important; overflow:visible !important; }
+  .selection-donut-wrap {
+    height:215px !important; min-height:215px !important; flex-basis:215px !important;
+    margin:2px auto 0 !important;
+  }
+}
+@media (max-width:430px) {
+  #epiasMsg { height:56px !important; min-height:56px !important; }
+  .selection-right { padding:8px !important; }
+  .selection-donut-wrap {
+    height:195px !important; min-height:195px !important; flex-basis:195px !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1413,7 +1460,7 @@ setInterval(() => {
 
 <!-- EPİAŞ BAĞLANTI DURUMU -->
 <div id="epiasStatus" style="position:fixed;right:18px;top:86px;z-index:1000000;background:#06111d;border:1px solid #334155;color:#94a3b8;padding:7px 10px;border-radius:4px;font:10px 'JetBrains Mono',monospace;box-shadow:0 0 18px rgba(0,210,255,.12);">
-  <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f9d423;margin-right:6px;"></span>
+  <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:6px;box-shadow:0 0 8px rgba(16,185,129,.7);"></span>
   <span id="epiasStatusText">EPİAŞ: BAĞLANTI BEKLENİYOR</span>
 </div>
 
@@ -1710,11 +1757,10 @@ setInterval(() => {
         const status = await pr.json();
         const pct = Number(status.percent || 0);
         setProgress(pct, status.stage || 'Veriler işleniyor...');
-        if (status.detail && status.detail !== status.stage) {
-          setMsg(`${status.stage}\n${status.detail}\n\nLütfen bekleyiniz.`);
-        } else {
-          setMsg(`${status.stage}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
-        }
+        // Ana durum metni sabit kalır; değişken grup numarası yalnızca ilerleme
+        // çubuğunun altındaki tek satırda gösterilir. Böylece ekran zıplamaz.
+        setMsg(`${status.stage}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
+        if (status.detail && progressLabel) progressLabel.textContent = status.detail;
       } catch (_) {
         // Ana EPİAŞ isteği devam ettiği sürece kısa süreli progress sorgu hatalarını yok say.
       }
@@ -1723,14 +1769,9 @@ setInterval(() => {
     progressPollTimer = setInterval(pollProgress, 700);
     await pollProgress();
 
-    const waitMessageTimer = setInterval(() => {
-      waitIndex = (waitIndex + 1) % waitMessages.length;
-      // Gerçek yüzde sunucudan gelir; bu timer yalnızca alt durum mesajını canlı tutar.
-      const currentPct = parseInt(progressPercent?.textContent || '0', 10) || 0;
-      const currentLabel = progressLabel?.textContent || 'Veriler işleniyor...';
-      setMsg(`${waitMessages[waitIndex]}\n${currentLabel}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
-      setProgress(currentPct, currentLabel);
-    }, 3000);
+    // Durum metni bağımsız bir sayaçla değiştirilmez. Sunucudan gelen aşama/grup bilgisi
+    // sabit yükseklikte gösterilir; böylece metin zıplamaz.
+    const waitMessageTimer = null;
 
     try {
       const r = await fetch('/api/epias', {
