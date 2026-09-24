@@ -565,13 +565,13 @@
 }
 
 
-/* KAYNAK DAĞILIMI - SON RESPONSIVE CILA */
+/* KAYNAK DAĞILIMI - SON RESPONSIVE CILA v2 */
 .selection-right {
   box-sizing: border-box !important;
   height: auto !important;
   min-height: 0 !important;
   flex: 0 0 auto !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   justify-content: flex-start !important;
 }
 .selection-right > div:first-child {
@@ -582,11 +582,11 @@
 .selection-donut-wrap {
   box-sizing: border-box !important;
   width: 100% !important;
-  height: 330px !important;
-  min-height: 330px !important;
-  flex: 0 0 330px !important;
-  margin: 12px auto 2px !important;
-  overflow: visible !important;
+  height: 430px !important;
+  min-height: 430px !important;
+  flex: 0 0 430px !important;
+  margin: 12px auto 0 !important;
+  overflow: hidden !important;
 }
 .selection-donut-wrap canvas {
   box-sizing: border-box !important;
@@ -596,31 +596,84 @@
   max-width: 100% !important;
   max-height: 100% !important;
 }
-@media (max-width: 768px) {
+
+/* Masaüstü: grafiği büyüt, lejandı aşağıya rahatça yay */
+@media (min-width:769px) {
+  .selection-box {
+    align-items: stretch;
+  }
   .selection-right {
-    height: auto !important;
-    min-height: 0 !important;
-    padding: 12px 10px 14px !important;
-    overflow: visible !important;
+    min-height: 485px !important;
   }
   .selection-donut-wrap {
-    height: 255px !important;
-    min-height: 255px !important;
-    flex-basis: 255px !important;
-    margin: 8px auto 0 !important;
+    height: 430px !important;
+    min-height: 430px !important;
+    flex-basis: 430px !important;
+    margin-top: 14px !important;
   }
 }
-@media (max-width: 430px) {
+
+/* Telefon: parent yüksekliği çocukların gerçek toplam yüksekliğini sarsın */
+@media (max-width:768px) {
+  #selectionOverlay {
+    align-items: stretch !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  .selection-box {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    align-self: flex-start !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
   .selection-right {
     height: auto !important;
     min-height: 0 !important;
-    padding: 10px 8px 12px !important;
+    padding: 12px 10px 18px !important;
+    overflow: hidden !important;
   }
   .selection-donut-wrap {
-    height: 235px !important;
-    min-height: 235px !important;
-    flex-basis: 235px !important;
+    height: 455px !important;
+    min-height: 455px !important;
+    flex-basis: 455px !important;
+    margin: 8px auto 0 !important;
+    overflow: hidden !important;
+  }
+  #epiasStatus {
+    top: auto !important;
+    right: 8px !important;
+    bottom: 82px !important;
+    left: auto !important;
+    max-width: calc(100vw - 16px) !important;
+    box-sizing: border-box !important;
+    z-index: 1000000 !important;
+  }
+}
+
+@media (max-width:430px) {
+  .selection-box {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .selection-right {
+    padding: 10px 8px 18px !important;
+  }
+  .selection-donut-wrap {
+    height: 455px !important;
+    min-height: 455px !important;
+    flex-basis: 455px !important;
     margin: 7px auto 0 !important;
+  }
+  #epiasStatus {
+    bottom: 78px !important;
+    right: 8px !important;
+    max-width: calc(100vw - 16px) !important;
   }
 }
 </style>
