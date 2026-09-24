@@ -822,7 +822,16 @@
     </div>
     <div class="selection-right">
         <div style="font-size:11px; color:var(--neon-pink); font-family:'JetBrains Mono'; margin-bottom: 12px; text-align: center; border-bottom: 1px solid rgba(247,37,133,0.2); padding-bottom: 5px;">İL GENELİ KAYNAK DAĞILIMI (%)</div>
-        <div class="selection-donut-wrap"><canvas id="donutChart"></canvas></div>
+        <div class="selection-donut-wrap">
+          <canvas id="donutChart"></canvas>
+          <div class="selection-space-brand" aria-hidden="true">
+            <img id="selectionSpaceLogo" alt="SantralMatik">
+            <div>
+              <div class="selection-space-brand-name">SANTRALMATİK</div>
+              <div class="selection-space-brand-sub">ÜRETİM SANTRALLERİ</div>
+            </div>
+          </div>
+        </div>
     </div>
   </div>
 </div>
@@ -1472,7 +1481,9 @@ function openSim(cityIdx, plantIdx) {
 document.addEventListener('DOMContentLoaded', () => {
   const sourceLogo = document.querySelector('.selection-brand-logo');
   const simLogo = document.getElementById('simBrandLogo');
+  const spaceLogo = document.getElementById('selectionSpaceLogo');
   if (sourceLogo && simLogo) simLogo.src = sourceLogo.src;
+  if (sourceLogo && spaceLogo) spaceLogo.src = sourceLogo.src;
 });
 
 function drawCityDonut(city) {
@@ -2062,3 +2073,65 @@ setInterval(() => {
 
 </body>
 </html>
+/* CİLA 7 - MASAÜSTÜ GRAFİK ALANI */
+.selection-space-brand {
+  display:none;
+}
+@media (min-width:769px) {
+  .selection-right {
+    min-height: 430px !important;
+    justify-content:flex-start !important;
+  }
+  .selection-donut-wrap {
+    height:430px !important;
+    min-height:430px !important;
+    flex-basis:430px !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+    margin:10px auto 0 !important;
+    overflow:visible !important;
+  }
+  .selection-donut-wrap canvas {
+    width:100% !important;
+    height:330px !important;
+    min-height:330px !important;
+    max-height:330px !important;
+    flex:0 0 330px !important;
+  }
+  .selection-space-brand {
+    display:flex !important;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+    margin-top:8px;
+    opacity:.82;
+    pointer-events:none;
+  }
+  .selection-space-brand img {
+    width:42px;
+    height:42px;
+    object-fit:contain;
+    border-radius:10px;
+    filter:drop-shadow(0 0 9px rgba(0,210,255,.25));
+  }
+  .selection-space-brand-name {
+    font-family:'Orbitron',sans-serif;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:2px;
+    color:#e2e8f0;
+  }
+  .selection-space-brand-sub {
+    margin-top:3px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:7px;
+    letter-spacing:1px;
+    color:#64748b;
+  }
+}
+@media (max-width:768px) {
+  .selection-space-brand { display:none !important; }
+}
