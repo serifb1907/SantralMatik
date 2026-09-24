@@ -765,6 +765,57 @@
   .selection-space-brand { display:none !important; }
 }
 
+
+/* CİLA 9 - KAYNAK DAĞILIMI MASAÜSTÜ SON DÜZEN */
+@media (min-width: 769px) {
+  .selection-box {
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .selection-right {
+    box-sizing: border-box !important;
+    min-height: 0 !important;
+    height: 365px !important;
+    padding: 15px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+  }
+
+  .selection-right > div:first-child {
+    flex: 0 0 auto !important;
+    margin-bottom: 8px !important;
+  }
+
+  .selection-donut-wrap {
+    position: relative !important;
+    width: 100% !important;
+    height: 325px !important;
+    min-height: 325px !important;
+    flex: 0 0 325px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .selection-donut-wrap canvas {
+    display: block !important;
+    width: 100% !important;
+    height: 325px !important;
+    min-height: 325px !important;
+    max-height: 325px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -889,13 +940,6 @@
         <div style="font-size:11px; color:var(--neon-pink); font-family:'JetBrains Mono'; margin-bottom: 12px; text-align: center; border-bottom: 1px solid rgba(247,37,133,0.2); padding-bottom: 5px;">İL GENELİ KAYNAK DAĞILIMI (%)</div>
         <div class="selection-donut-wrap">
           <canvas id="donutChart"></canvas>
-          <div class="selection-space-brand" aria-hidden="true">
-            <img id="selectionSpaceLogo" alt="SantralMatik">
-            <div>
-              <div class="selection-space-brand-name">SANTRALMATİK</div>
-              <div class="selection-space-brand-sub">ÜRETİM SANTRALLERİ</div>
-            </div>
-          </div>
         </div>
     </div>
   </div>
@@ -1546,9 +1590,7 @@ function openSim(cityIdx, plantIdx) {
 document.addEventListener('DOMContentLoaded', () => {
   const sourceLogo = document.querySelector('.selection-brand-logo');
   const simLogo = document.getElementById('simBrandLogo');
-  const spaceLogo = document.getElementById('selectionSpaceLogo');
   if (sourceLogo && simLogo) simLogo.src = sourceLogo.src;
-  if (sourceLogo && spaceLogo) spaceLogo.src = sourceLogo.src;
 });
 
 function drawCityDonut(city) {
