@@ -284,6 +284,19 @@
 #sourceFilters { top:14px !important; right:18px !important; }
 
 
+/* SANTRALMATİK SANTRAL DETAY MARKA ALANI */
+.sim-brand-wrap { display:flex; align-items:center; gap:12px; min-width:0; }
+.sim-brand-logo { width:46px; height:46px; object-fit:contain; border-radius:10px; flex:0 0 auto; filter:drop-shadow(0 0 8px rgba(0,210,255,.22)); }
+.sim-brand-text { min-width:0; }
+
+/* AKIŞ ÇİZGİSİ: CSS animasyonu ile her ortamda güvenilir hareket */
+.connector { height:24px; width:3px; background:#152235; margin:0 auto; position:relative; overflow:hidden; border-radius:3px; }
+.pulse { position:absolute; left:0; top:-36px; width:100%; height:36px; background:linear-gradient(180deg, transparent 0%, var(--neon-blue) 45%, #fff 50%, var(--neon-blue) 55%, transparent 100%); box-shadow:0 0 8px rgba(0,210,255,.8); animation:scada-pulse 1.15s linear infinite; will-change:transform; }
+.connector:nth-of-type(2) .pulse { animation-delay:.22s; }
+.connector:nth-of-type(4) .pulse { animation-delay:.44s; }
+.connector:nth-of-type(6) .pulse { animation-delay:.66s; }
+@keyframes scada-pulse { from { transform:translateY(0); } to { transform:translateY(60px); } }
+
 /* SANTRALMATİK MOBİL UYUMLULUK */
 @media (max-width: 768px) {
   html, body { overflow:hidden; }
@@ -337,7 +350,7 @@
     box-sizing:border-box; flex-direction:column; gap:10px; padding:12px; margin:auto 0;
   }
   .selection-left, .selection-right { width:100%; min-width:0; box-sizing:border-box; }
-  .selection-right { min-height:220px; padding:10px; }
+  .selection-right { min-height:0; padding:10px; overflow:visible; }
   .selection-box h2 { font-size:20px !important; letter-spacing:2px !important; overflow-wrap:anywhere; }
   .city-summary-card { padding:9px; gap:8px; }
   #selCityTotal { font-size:17px !important; }
@@ -347,6 +360,10 @@
 
   #simOverlay { padding:10px; overflow-y:auto; overflow-x:hidden; }
   #topBar { gap:8px; align-items:flex-start; }
+  .sim-brand-wrap { min-width:0; gap:8px; }
+  .sim-brand-logo { width:34px; height:34px; border-radius:8px; }
+  .sim-brand-text { min-width:0; }
+
   #cityTitle { font-size:21px; letter-spacing:1.5px; overflow-wrap:anywhere; }
   #plantInfo { font-size:9px; line-height:1.35; overflow-wrap:anywhere; }
   #backBtn { padding:6px 8px; font-size:8px; flex:0 0 auto; }
@@ -398,12 +415,12 @@
   .selection-right {
     min-height: 0 !important;
     flex: 0 0 auto !important;
-    overflow: hidden;
+    overflow: visible !important;
   }
   .selection-donut-wrap {
-    height: 220px;
-    min-height: 220px;
-    flex-basis: 220px;
+    height: 255px;
+    min-height: 255px;
+    flex-basis: 255px;
   }
   #simOverlay {
     overflow-y: auto !important;
@@ -451,9 +468,9 @@
 @media (max-width: 430px) {
   .selection-right { padding: 8px !important; }
   .selection-donut-wrap {
-    height: 205px;
-    min-height: 205px;
-    flex-basis: 205px;
+    height: 235px;
+    min-height: 235px;
+    flex-basis: 235px;
   }
   .selection-right > div:first-child {
     font-size: 9px !important;
@@ -668,10 +685,6 @@
         <button onclick="closeSelection()" style="background:transparent; border:none; color:var(--neon-pink); cursor:pointer; margin-top:15px; font-family:Orbitron; font-size:11px;">[ HARİTAYA GERİ DÖN ]</button>
     </div>
     <div class="selection-right">
-        <div class="selection-chart-brand">
-          <img id="selectionChartLogo" alt="SantralMatik">
-          <div class="selection-chart-brand-text">SANTRALMATİK<small>ENERJİ KAYNAK DAĞILIMI</small></div>
-        </div>
         <div style="font-size:11px; color:var(--neon-pink); font-family:'JetBrains Mono'; margin-bottom: 12px; text-align: center; border-bottom: 1px solid rgba(247,37,133,0.2); padding-bottom: 5px;">İL GENELİ KAYNAK DAĞILIMI (%)</div>
         <div class="selection-donut-wrap"><canvas id="donutChart"></canvas></div>
     </div>
@@ -680,9 +693,12 @@
 
 <div id="simOverlay">
   <div id="topBar">
-    <div>
-      <div id="cityTitle">--</div>
-      <div id="plantInfo">--</div>
+    <div class="sim-brand-wrap">
+      <img id="simBrandLogo" class="sim-brand-logo" alt="SantralMatik">
+      <div class="sim-brand-text">
+        <div id="cityTitle">--</div>
+        <div id="plantInfo">--</div>
+      </div>
     </div>
     <button id="backBtn" onclick="closeSim()">← LİSTEYE DÖN</button>
   </div>
@@ -1297,7 +1313,6 @@ function openSim(cityIdx, plantIdx) {
 
     log.innerHTML = `&gt; [${zaman}] [BAĞLANTI_OK]: ${city.n} // ${plant.p} SCADA telemetri köprüsü kuruldu.<br>&gt; [EPİAŞ]: Şeffaflık Platformu veritabanından ${plant.v.toFixed(2)} MWh üretim verisi doğrulandı.${teknikDetay}`;
     
-    gsap.to(".pulse", { top: "100%", duration: 0.8, repeat: -1, ease: "none", stagger: 0.2 });
 
     if (activeSimTimer) clearInterval(activeSimTimer);
     activeSimTimer = setInterval(() => {
@@ -1320,8 +1335,8 @@ function openSim(cityIdx, plantIdx) {
 
 document.addEventListener('DOMContentLoaded', () => {
   const sourceLogo = document.querySelector('.selection-brand-logo');
-  const chartLogo = document.getElementById('selectionChartLogo');
-  if (sourceLogo && chartLogo) chartLogo.src = sourceLogo.src;
+  const simLogo = document.getElementById('simBrandLogo');
+  if (sourceLogo && simLogo) simLogo.src = sourceLogo.src;
 });
 
 function drawCityDonut(city) {
