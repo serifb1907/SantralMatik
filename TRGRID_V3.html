@@ -376,6 +376,65 @@
   #epiasElectricalInfo { font-size:8px !important; }
 }
 
+
+/* MOBİL SEÇİM / GRAFİK DÜZENİ */
+.selection-donut-wrap {
+  width: 100%;
+  height: 280px;
+  min-height: 280px;
+  position: relative;
+  flex: 0 0 280px;
+}
+.selection-donut-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  max-height: 100%;
+}
+#terminal { flex: 0 0 auto; }
+
+@media (max-width: 768px) {
+  .selection-right {
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    overflow: hidden;
+  }
+  .selection-donut-wrap {
+    height: 220px;
+    min-height: 220px;
+    flex-basis: 220px;
+  }
+  #simOverlay {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding-bottom: 18px !important;
+  }
+  #topBar { flex-shrink: 0; }
+  .main-grid {
+    flex-shrink: 0;
+    padding-bottom: 2px;
+  }
+  .charts-section {
+    height: 330px !important;
+    min-height: 330px !important;
+    flex: 0 0 330px !important;
+    overflow: hidden;
+  }
+  .charts-section > div:last-child {
+    min-height: 0 !important;
+    height: calc(100% - 2px) !important;
+  }
+  #terminal {
+    position: relative !important;
+    z-index: 2;
+    margin-top: 12px !important;
+    margin-bottom: 6px !important;
+    flex-shrink: 0 !important;
+    clear: both;
+  }
+}
+
 @media (max-width: 430px) {
   #sourceFilters { grid-template-columns:repeat(2, minmax(0,1fr)); bottom:7px; }
   #mapLegend { bottom:170px; max-height:125px; }
@@ -386,6 +445,31 @@
   .selection-box { padding:9px; }
   .selection-right { min-height:190px; }
   .charts-section { height:300px; }
+}
+
+
+@media (max-width: 430px) {
+  .selection-right { padding: 8px !important; }
+  .selection-donut-wrap {
+    height: 205px;
+    min-height: 205px;
+    flex-basis: 205px;
+  }
+  .selection-right > div:first-child {
+    font-size: 9px !important;
+    margin-bottom: 7px !important;
+  }
+  #simOverlay { padding: 8px 8px 16px !important; }
+  .main-grid { gap: 12px !important; }
+  .charts-section {
+    height: 305px !important;
+    min-height: 305px !important;
+    flex-basis: 305px !important;
+    padding-top: 44px !important;
+  }
+  .chart-title { max-width: 52% !important; }
+  .chart-controls { max-width: 45% !important; }
+  #terminal { height: 125px !important; margin-top: 12px !important; }
 }
 
 </style>
@@ -510,7 +594,7 @@
     </div>
     <div class="selection-right">
         <div style="font-size:11px; color:var(--neon-pink); font-family:'JetBrains Mono'; margin-bottom: 12px; text-align: center; border-bottom: 1px solid rgba(247,37,133,0.2); padding-bottom: 5px;">İL GENELİ KAYNAK DAĞILIMI (%)</div>
-        <div style="flex-grow:1; position:relative;"><canvas id="donutChart"></canvas></div>
+        <div class="selection-donut-wrap"><canvas id="donutChart"></canvas></div>
     </div>
   </div>
 </div>
@@ -1597,7 +1681,6 @@ setInterval(() => {
       `⟳ ${formatTRDate(targetDate)} tarihine geçiliyor...<br>EPİAŞ verileri güncelleniyor, lütfen bekleyiniz.`,
       'loading'
     );
-    setMsg(`${targetDate} tarihi için EPİAŞ verileri çekiliyor...\nSantral üretimleri toplanıyor. Bu işlem birkaç dakika sürebilir.`);
 
     const waitMessages = [
       'EPİAŞ sunucusuna bağlanılıyor...',
@@ -1608,46 +1691,46 @@ setInterval(() => {
       'Harita verileri hazırlanıyor...',
       'Son kontroller yapılıyor...'
     ];
-    // İlerleme yüzdesi tahminidir: sunucu gerçek indirme yüzdesini stream etmediği için
-    // veri gerçekten dönene kadar çubuk %90'ı geçmez. Böylece %97'de uzun süre takılı kalmaz.
-    const progressStages = [
-      { pct: 8,  label: 'EPİAŞ sunucusuna bağlantı kuruluyor...' },
-      { pct: 18, label: 'Santral listesi hazırlanıyor...' },
-      { pct: 32, label: 'Üretim verileri alınıyor...' },
-      { pct: 46, label: 'Saatlik üretimler işleniyor...' },
-      { pct: 58, label: 'Üretim kayıtları eşleştiriliyor...' },
-      { pct: 70, label: 'Türkiye toplam üretimi hesaplanıyor...' },
-      { pct: 80, label: 'Harita verileri hazırlanıyor...' },
-      { pct: 86, label: 'Son kontroller yapılıyor...' }
-    ];
+
+    const jobId = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : 'job-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+
     let waitIndex = 0;
-    let progressIndex = 0;
+    let progressPollTimer = null;
     setMsg(`${waitMessages[waitIndex]}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
-    setProgress(progressStages[0].pct, progressStages[0].label);
-    let slowProgress = progressStages[0].pct;
-    const waitTimer = setInterval(() => {
+    setProgress(0, 'EPİAŞ bağlantısı hazırlanıyor...');
+
+    const pollProgress = async () => {
+      try {
+        const pr = await fetch('/api/epias-progress?jobId=' + encodeURIComponent(jobId), {
+          cache: 'no-store'
+        });
+        if (!pr.ok) return;
+        const status = await pr.json();
+        const pct = Number(status.percent || 0);
+        setProgress(pct, status.stage || 'Veriler işleniyor...');
+        if (status.detail && status.detail !== status.stage) {
+          setMsg(`${status.stage}\n${status.detail}\n\nLütfen bekleyiniz.`);
+        } else {
+          setMsg(`${status.stage}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
+        }
+      } catch (_) {
+        // Ana EPİAŞ isteği devam ettiği sürece kısa süreli progress sorgu hatalarını yok say.
+      }
+    };
+
+    progressPollTimer = setInterval(pollProgress, 700);
+    await pollProgress();
+
+    const waitMessageTimer = setInterval(() => {
       waitIndex = (waitIndex + 1) % waitMessages.length;
-      progressIndex = Math.min(progressIndex + 1, progressStages.length - 1);
-      const stage = progressStages[progressIndex];
-
-      // Aşamalar bittikten sonra çubuk yavaşça ilerler, fakat gerçek cevap gelmeden %90'ı aşmaz.
-      if (progressIndex === progressStages.length - 1) {
-        slowProgress = Math.min(90, Math.max(stage.pct, slowProgress + 1));
-        setProgress(slowProgress, slowProgress >= 90 ? 'EPİAŞ verileri tamamlanıyor, son yanıt bekleniyor...' : stage.label);
-      } else {
-        slowProgress = stage.pct;
-        setProgress(stage.pct, stage.label);
-      }
-      setMsg(`${waitMessages[waitIndex]}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
+      // Gerçek yüzde sunucudan gelir; bu timer yalnızca alt durum mesajını canlı tutar.
+      const currentPct = parseInt(progressPercent?.textContent || '0', 10) || 0;
+      const currentLabel = progressLabel?.textContent || 'Veriler işleniyor...';
+      setMsg(`${waitMessages[waitIndex]}\n${currentLabel}\n\nİşlem devam ediyor. Lütfen bekleyiniz.`);
+      setProgress(currentPct, currentLabel);
     }, 3000);
-
-    // Uzun süren isteklerde yüzde 90 civarında kontrollü bekleme.
-    const slowProgressTimer = setInterval(() => {
-      if (progressIndex >= progressStages.length - 1 && slowProgress < 90) {
-        slowProgress = Math.min(90, slowProgress + 1);
-        setProgress(slowProgress, slowProgress >= 90 ? 'EPİAŞ verileri tamamlanıyor, son yanıt bekleniyor...' : 'Veriler işleniyor...');
-      }
-    }, 5000);
 
     try {
       const r = await fetch('/api/epias', {
@@ -1656,7 +1739,8 @@ setInterval(() => {
         body:JSON.stringify({
           username:epiasSession.username,
           password:epiasSession.password,
-          date:targetDate
+          date:targetDate,
+          jobId
         })
       });
       const data = await r.json();
@@ -1693,8 +1777,8 @@ setInterval(() => {
       setMsg('EPİAŞ VERİSİ ALINAMADI:\n' + e.message);
       return false;
     } finally {
-      clearInterval(waitTimer);
-      clearInterval(slowProgressTimer);
+      clearInterval(waitMessageTimer);
+      if (progressPollTimer) clearInterval(progressPollTimer);
       btn.disabled = false;
       btn.textContent = "EPİAŞ'A BAĞLAN VE VERİLERİ ÇEK";
     }
