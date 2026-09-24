@@ -597,19 +597,26 @@
   max-height: 100% !important;
 }
 
-/* Masaüstü: grafiği büyüt, lejandı aşağıya rahatça yay */
+/* Masaüstü: eski grafik boyutu korunur, merkezlenir; lejand aşağıda kalır */
 @media (min-width:769px) {
   .selection-box {
     align-items: stretch;
   }
   .selection-right {
-    min-height: 485px !important;
+    min-height: 365px !important;
   }
   .selection-donut-wrap {
-    height: 430px !important;
-    min-height: 430px !important;
-    flex-basis: 430px !important;
-    margin-top: 14px !important;
+    height: 330px !important;
+    min-height: 330px !important;
+    flex-basis: 330px !important;
+    margin: 10px auto 0 !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+  .selection-donut-wrap canvas {
+    width:100% !important;
+    height:100% !important;
   }
 }
 
@@ -644,9 +651,9 @@
     overflow: hidden !important;
   }
   #epiasStatus {
-    top: auto !important;
+    top: 86px !important;
     right: 8px !important;
-    bottom: 82px !important;
+    bottom: auto !important;
     left: auto !important;
     max-width: calc(100vw - 16px) !important;
     box-sizing: border-box !important;
@@ -671,7 +678,24 @@
     margin: 7px auto 0 !important;
   }
   #epiasStatus {
-    bottom: 78px !important;
+    top: 86px !important;
+    right: 8px !important;
+    bottom: auto !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+}
+/* EPİAŞ durum kartı: viewport'a sabit kalır; aşağı kaydırmada hareket etmez */
+#epiasStatus {
+  position: fixed !important;
+  top: 86px !important;
+  right: 18px !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 1000000 !important;
+}
+@media (max-width:768px) {
+  #epiasStatus {
+    top: 86px !important;
     right: 8px !important;
     max-width: calc(100vw - 16px) !important;
   }
