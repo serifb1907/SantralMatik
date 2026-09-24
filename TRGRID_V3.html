@@ -816,6 +816,39 @@
   }
 }
 
+/* CİLA 10 - İL KAYNAK DAĞILIMI: başlık üstte / donut tam ortada / lejand altta */
+#selectionOverlay .selection-right {
+  display: flex !important; flex-direction: column !important;
+  align-items: center !important; justify-content: flex-start !important;
+  gap: 10px !important; box-sizing: border-box !important;
+  height: auto !important; min-height: 0 !important; overflow: visible !important;
+}
+#selectionOverlay .selection-right > div:first-child {
+  width: 100%; flex: 0 0 auto !important; margin-bottom: 0 !important;
+}
+#selectionOverlay .selection-right .selection-donut-wrap {
+  position: relative !important; display: block !important;
+  flex: 0 0 auto !important; width: min(100%, 280px) !important;
+  height: auto !important; min-height: 0 !important; aspect-ratio: 1 / 1 !important;
+  margin: auto !important; padding: 0 !important; overflow: visible !important;
+}
+#selectionOverlay .selection-right .selection-donut-wrap canvas {
+  position: absolute !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  min-height: 0 !important; max-height: none !important; margin: 0 !important;
+}
+.donut-legend {
+  flex: 0 0 auto; width: 100%; box-sizing: border-box;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+  gap: 6px 14px; text-align: center;
+  font: 10px/1.3 'JetBrains Mono', monospace; color: #daffde;
+}
+.donut-legend .dl-item { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none; }
+.donut-legend .dl-dot { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 auto; }
+.donut-legend .dl-item.off { opacity: .35; text-decoration: line-through; }
+@media (min-width: 769px) { #selectionOverlay .selection-right { min-height: 430px !important; } }
+@media (max-width: 430px) { .donut-legend { font-size: 9px; gap: 5px 10px; } }
+
 </style>
 </head>
 <body>
@@ -941,6 +974,7 @@
         <div class="selection-donut-wrap">
           <canvas id="donutChart"></canvas>
         </div>
+        <div id="donutLegend" class="donut-legend"></div>
     </div>
   </div>
 </div>
@@ -1629,10 +1663,7 @@ function drawCityDonut(city) {
             responsive: true, 
             maintainAspectRatio: false, 
             plugins: { 
-                legend: { 
-                    position: 'bottom', 
-                    labels: { color: '#daffde', font: { size: 10, family: 'JetBrains Mono' }, boxWidth: 12, padding: 8 } 
-                }, 
+                legend: { display: false }, 
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -1645,6 +1676,31 @@ function drawCityDonut(city) {
                 }
             } 
         }
+    });
+    renderDonutLegend();
+}
+
+function renderDonutLegend() {
+    const box = document.getElementById('donutLegend');
+    if (!box || !donutObj) return;
+    box.innerHTML = '';
+    const labels = donutObj.data.labels || [];
+    const colors = donutObj.data.datasets[0].backgroundColor || [];
+    labels.forEach((lbl, i) => {
+        const item = document.createElement('div');
+        item.className = 'dl-item';
+        const dot = document.createElement('span');
+        dot.className = 'dl-dot';
+        dot.style.background = colors[i % colors.length];
+        const txt = document.createElement('span');
+        txt.textContent = lbl;
+        item.append(dot, txt);
+        item.onclick = () => {
+            donutObj.toggleDataVisibility(i);
+            donutObj.update();
+            item.classList.toggle('off', !donutObj.getDataVisibility(i));
+        };
+        box.appendChild(item);
     });
 }
 
