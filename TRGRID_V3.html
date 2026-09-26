@@ -44,7 +44,7 @@
 
     /* HIZLI ARAMA KUTUSU VE DROPDOWN */
     #searchBoxWrapper {
-      position: fixed; top: 80px; left: 18px; z-index: 999;
+      position: fixed; top: 80px; left: 18px; z-index: 10001;
       display: flex; align-items: center; background: rgba(2, 6, 23, 0.94);
       border: 1px solid rgba(0, 210, 255, 0.35); border-radius: 6px; padding: 6px 12px;
       backdrop-filter: blur(12px); box-shadow: 0 0 20px rgba(0,0,0,0.6);
@@ -56,8 +56,8 @@
     #citySearchInput::placeholder { color: #64748b; }
     #searchDropdown {
       display: none; position: absolute; top: 38px; left: 0; width: 100%;
-      max-height: 200px; overflow-y: auto; background: rgba(2, 6, 23, 0.98);
-      border: 1px solid var(--neon-blue); border-radius: 6px; z-index: 9999;
+      max-height: 260px; overflow-y: auto; background: rgba(2, 6, 23, 0.98);
+      border: 1px solid var(--neon-blue); border-radius: 6px; z-index: 10002;
       box-shadow: 0 0 25px rgba(0, 210, 255, 0.25);
     }
     #searchDropdown::-webkit-scrollbar { width: 4px; }
@@ -313,7 +313,7 @@
   .hud-dot { width:6px; height:6px; margin-right:4px; }
 
   #searchBoxWrapper {
-    top:116px; left:8px; right:8px; width:auto; box-sizing:border-box;
+    top:116px; left:8px; right:8px; width:auto; box-sizing:border-box; z-index:10001;
     padding:6px 9px;
   }
   #citySearchInput { width:100%; min-width:0; font-size:10px; }
@@ -887,7 +887,7 @@
 /* GERÇEK ZAMANLI ÜRETİM SEKME + GÖRÜNÜM */
 #realtimeTab {
   position:fixed; top:80px; left:50%; transform:translateX(-50%);
-  z-index:1000003; display:flex; align-items:center; gap:8px;
+  z-index:99997; display:flex; align-items:center; gap:8px;
   padding:9px 15px; border:1px solid rgba(0,210,255,.45); border-radius:6px;
   background:rgba(2,6,23,.94); color:#cbd5e1; cursor:pointer;
   font:700 10px 'JetBrains Mono',monospace; letter-spacing:.8px;
@@ -991,7 +991,7 @@
 <!-- HIZLI ARAMA -->
 <div id="searchBoxWrapper">
   <span style="color:var(--neon-blue); margin-right:8px; font-size:13px;">🔍</span>
-  <input type="text" id="citySearchInput" placeholder="İl Ara (Örn: izmir, afyon)..." oninput="filterSearch(event)" onkeydown="checkSearchEnter(event)">
+  <input type="text" id="citySearchInput" placeholder="İl / santral ara (Örn: İzmir, Soma)..." oninput="filterSearch(event)" onkeydown="checkSearchEnter(event)">
   <div id="searchDropdown"></div>
 </div>
 
@@ -1603,38 +1603,91 @@ function filterSearch(e) {
     return;
   }
 
-  const matches = allCities
+  // İl sonuçları
+  const cityMatches = allCities
     .map((city, idx) => ({ city, idx }))
     .filter(item => normalizeTR(item.city.n).includes(normQuery));
 
-  if (matches.length > 0) {
-    dropdown.innerHTML = matches.slice(0, 6).map(m => `
-      <div onclick="selectCityFromSearch(${m.idx})" style="padding:8px 12px; font-family:'JetBrains Mono'; font-size:11px; cursor:pointer; border-bottom:1px solid rgba(0,210,255,0.12); color:#fff; display:flex; justify-content:space-between; align-items:center; transition:0.2s;" onmouseover="this.style.background='rgba(0,210,255,0.15)'" onmouseout="this.style.background='transparent'">
-        <span>${m.city.n}</span>
-        <small style="color:var(--neon-yellow); font-weight:bold;">${m.city.totalMWh.toFixed(0)} MWh</small>
-      </div>
-    `).join("");
+  // Üretim yapan santral sonuçları. Aynı santral adının farklı illerde bulunması
+  // durumunda il adı da gösterilir; böylece kullanıcı doğru tesisi seçebilir.
+  const plantMatches = [];
+  allCities.forEach((city, cityIdx) => {
+    (city.plants || []).forEach((plant, plantIdx) => {
+      if (cleanVal(plant.v) <= 0) return;
+      if (normalizeTR(plant.p).includes(normQuery)) {
+        plantMatches.push({ city, cityIdx, plant, plantIdx });
+      }
+    });
+  });
+
+  if (cityMatches.length === 0 && plantMatches.length === 0) {
+    dropdown.innerHTML = `<div style="padding:10px 12px;font-family:'JetBrains Mono';font-size:11px;color:#94a3b8;">Eşleşen il veya üretim yapan santral bulunamadı</div>`;
     dropdown.style.display = "block";
-  } else {
-    dropdown.innerHTML = `<div style="padding:8px 12px; font-family:'JetBrains Mono'; font-size:11px; color:#94a3b8;">Eşleşen il bulunamadı</div>`;
-    dropdown.style.display = "block";
+    return;
   }
+
+  const cityHtml = cityMatches.slice(0, 6).map(m => `
+    <div onclick="selectCityFromSearch(${m.idx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:11px;cursor:pointer;border-bottom:1px solid rgba(0,210,255,0.12);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(0,210,255,.15)'" onmouseout="this.style.background='transparent'">
+      <span>📍 ${m.city.n}</span>
+      <small style="color:var(--neon-yellow);font-weight:bold;white-space:nowrap;">${cleanVal(m.city.totalMWh).toFixed(0)} MWh</small>
+    </div>
+  `).join('');
+
+  const plantHtml = plantMatches.slice(0, 8).map(m => `
+    <div onclick="selectPlantFromSearch(${m.cityIdx},${m.plantIdx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:10px;cursor:pointer;border-bottom:1px solid rgba(16,185,129,.14);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(16,185,129,.12)'" onmouseout="this.style.background='transparent'">
+      <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${m.plant.p} <small style="color:#64748b;">[${m.city.n}]</small></span>
+      <small style="color:var(--neon-green);font-weight:bold;white-space:nowrap;">${cleanVal(m.plant.v).toFixed(0)} MWh</small>
+    </div>
+  `).join('');
+
+  dropdown.innerHTML = `
+    ${cityHtml ? `<div style="padding:5px 10px;background:rgba(0,210,255,.06);color:#38bdf8;font:700 8px 'JetBrains Mono';letter-spacing:1px;">İLLER</div>${cityHtml}` : ''}
+    ${plantHtml ? `<div style="padding:5px 10px;background:rgba(16,185,129,.06);color:#34d399;font:700 8px 'JetBrains Mono';letter-spacing:1px;">ÜRETİM YAPAN SANTRALLER</div>${plantHtml}` : ''}
+  `;
+  dropdown.style.display = "block";
 }
 
-function selectCityFromSearch(idx) {
-  const city = allCities[idx];
-  document.getElementById("citySearchInput").value = city.n;
+function selectPlantFromSearch(cityIdx, plantIdx) {
+  const city = allCities[cityIdx];
+  const plant = city?.plants?.[plantIdx];
+  if (!city || !plant) return;
+
+  document.getElementById("citySearchInput").value = plant.p;
   document.getElementById("searchDropdown").style.display = "none";
-  map.flyTo(city.c, 8, { duration: 1.2 });
-  handleCityClick(idx);
-}
+  map.flyTo(city.c, 9, { duration: 1.2 });
+  handleCityClick(cityIdx);
 
+  // Seçilen santrali listede görünür hâle getirip kısa süre vurgula.
+  requestAnimationFrame(() => {
+    const buttons = Array.from(document.querySelectorAll('#plantButtons .plant-btn'));
+    const target = buttons.find(btn => btn.textContent.includes(plant.p));
+    if (target) {
+      target.scrollIntoView({ block:'center', behavior:'smooth' });
+      target.style.boxShadow = '0 0 18px rgba(0,210,255,.65)';
+      target.style.borderColor = '#00d2ff';
+      setTimeout(() => {
+        target.style.boxShadow = '';
+        target.style.borderColor = '';
+      }, 1800);
+    }
+  });
+}
 function checkSearchEnter(e) {
-  if (e.key === "Enter") {
-    const normQuery = normalizeTR(e.target.value);
-    const foundIdx = allCities.findIndex(c => normalizeTR(c.n).includes(normQuery));
-    if (foundIdx !== -1) {
-      selectCityFromSearch(foundIdx);
+  if (e.key !== "Enter") return;
+  const normQuery = normalizeTR(e.target.value);
+  if (!normQuery) return;
+
+  const cityIdx = allCities.findIndex(c => normalizeTR(c.n).includes(normQuery));
+  if (cityIdx !== -1) {
+    selectCityFromSearch(cityIdx);
+    return;
+  }
+
+  for (let i = 0; i < allCities.length; i++) {
+    const plantIdx = (allCities[i].plants || []).findIndex(p => cleanVal(p.v) > 0 && normalizeTR(p.p).includes(normQuery));
+    if (plantIdx !== -1) {
+      selectPlantFromSearch(i, plantIdx);
+      return;
     }
   }
 }
@@ -2177,6 +2230,7 @@ setInterval(() => {
 
 /* GERÇEK ZAMANLI ÜRETİM GRAFİĞİ */
 let realtimeChartObj = null;
+let realtimeEpiasPlants = [];
 
 const realtimeGroups = [
   { key:'hydro', label:'Hidro', color:'#27a9b7' },
@@ -2203,6 +2257,15 @@ function getRealtimeHourlyData() {
     realtimeGroups.forEach(g => row[g.key] = 0);
     return row;
   });
+
+  if (Array.isArray(realtimeEpiasPlants) && realtimeEpiasPlants.length) {
+    realtimeEpiasPlants.forEach(plant => {
+      const group = realtimeGroupForType(plant.type || plant.k);
+      const hourly = Array.isArray(plant.hourly) ? plant.hourly : [];
+      for (let h = 0; h < 24; h++) rows[h][group] += cleanVal(hourly[h]);
+    });
+    return rows;
+  }
 
   if (typeof allCities === 'undefined' || !Array.isArray(allCities)) return rows;
 
@@ -2333,6 +2396,7 @@ function closeRealtimeProduction() {
   function applyData(payload) {
     const plants = Array.isArray(payload?.plants) ? payload.plants : [];
     if (!plants.length) throw new Error('EPİAŞ yanıtında üretim kaydı bulunamadı.');
+    realtimeEpiasPlants = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
 
     const byName = new Map();
     plants.forEach(x => {
