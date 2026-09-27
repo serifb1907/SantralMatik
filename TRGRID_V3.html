@@ -890,91 +890,6 @@
 
 
 
-/* GERÇEK ZAMANLI ÜRETİM SEKME + GÖRÜNÜM */
-#realtimeTab {
-  position:fixed; top:80px; left:50%; transform:translateX(-50%);
-  z-index:99997; display:flex; align-items:center; gap:8px;
-  padding:9px 15px; border:1px solid rgba(0,210,255,.45); border-radius:6px;
-  background:rgba(2,6,23,.94); color:#cbd5e1; cursor:pointer;
-  font:700 10px 'JetBrains Mono',monospace; letter-spacing:.8px;
-  box-shadow:0 0 18px rgba(0,0,0,.35), inset 0 0 12px rgba(0,210,255,.04);
-  backdrop-filter:blur(12px); transition:.2s ease;
-}
-/* Gerçek zamanlı üretim yalnızca ana harita ekranında görünür. */
-body.realtime-login-locked #realtimeTab,
-body.realtime-selection-open #realtimeTab,
-body.realtime-sim-open #realtimeTab { display:none !important; }
-
-#realtimeTab:hover, #realtimeTab.active {
-  color:#001018; background:var(--neon-blue); border-color:var(--neon-blue);
-  box-shadow:0 0 18px rgba(0,210,255,.38);
-}
-#realtimeTab .rt-dot {
-  width:7px; height:7px; border-radius:50%; background:#10b981;
-  box-shadow:0 0 8px rgba(16,185,129,.9); flex:0 0 auto;
-}
-
-#realtimeOverlay {
-  position:fixed; inset:0; z-index:1000002; display:none;
-  flex-direction:column; padding:18px 32px 22px;
-  background:radial-gradient(circle at center, rgba(1, 10, 25, 0.98) 0%, rgba(1, 4, 9, 1) 100%);
-  color:#fff; font-family:'JetBrains Mono',monospace;
-  box-sizing:border-box; overflow:hidden;
-}
-#realtimeOverlay.open { display:flex; }
-#realtimeTopBar {
-  flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
-  min-height:48px; border-bottom:1px solid rgba(0,210,255,.16); padding:0 2px 9px;
-}
-#realtimeTitleWrap { display:flex; align-items:center; gap:10px; min-width:0; }
-#realtimeTitleIcon { font-size:24px; color:#0ea5e9; }
-#realtimeTitle { font:700 22px 'Orbitron',sans-serif; color:#e2e8f0; letter-spacing:.3px; text-shadow:0 0 10px rgba(0,210,255,.18); }
-#realtimeSubtitle { margin-top:3px; font-size:9px; color:#64748b; letter-spacing:.4px; }
-#realtimeClose {
-  border:1px solid rgba(247,37,133,.7); background:transparent; color:var(--neon-pink); border-radius:5px;
-  padding:7px 10px; cursor:pointer; font:700 10px 'JetBrains Mono',monospace;
-  transition:.2s ease;
-}
-#realtimeClose:hover { background:var(--neon-pink); color:#fff; border-color:var(--neon-pink); box-shadow:0 0 15px rgba(247,37,133,.35); }
-#realtimeMeta {
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding:8px 2px 6px; color:#94a3b8; font-size:9px;
-}
-#realtimeDateLabel { font-weight:700; color:#cbd5e1; }
-#realtimeTotalLabel { color:var(--neon-green); font-weight:700; text-shadow:0 0 8px rgba(16,185,129,.2); }
-#realtimeChartCard {
-  position:relative; flex:1 1 auto; min-height:0; background:rgba(5, 12, 28, 0.72);
-  border:1px solid rgba(0,210,255,.16); border-radius:8px; box-shadow:inset 0 0 25px rgba(0,210,255,.04), 0 0 20px rgba(0,0,0,.35);
-  padding:10px 12px 6px; box-sizing:border-box; overflow:hidden;
-}
-#realtimeChartWrap { position:relative; width:100%; height:100%; min-height:0; }
-#realtimeChart { display:block; width:100% !important; height:100% !important; }
-#realtimeEmpty {
-  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-  color:#94a3b8; font-size:11px; text-align:center; pointer-events:none;
-}
-#realtimeLegendNote {
-  flex:0 0 auto; padding-top:7px; color:#64748b; font-size:8px; line-height:1.4;
-}
-@media (max-width:768px) {
-  #realtimeTab { top:116px; left:8px; right:8px; transform:none; justify-content:center; }
-  #realtimeOverlay { padding:10px 8px 12px; }
-  #realtimeTopBar { min-height:42px; padding-bottom:7px; }
-  #realtimeTitle { font-size:15px; }
-  #realtimeTitleIcon { font-size:18px; }
-  #realtimeSubtitle { font-size:7px; }
-  #realtimeClose { font-size:8px; padding:6px 8px; }
-  #realtimeMeta { font-size:8px; }
-  #realtimeChartCard { padding:6px 5px 4px; }
-  #realtimeLegendNote { font-size:7px; }
-}
-@media (max-width:430px) {
-  #realtimeTab { top:116px; font-size:9px; padding:8px 12px; }
-  #realtimeOverlay { padding:8px 6px 9px; }
-  #realtimeTitle { font-size:13px; }
-  #realtimeMeta { padding-top:6px; }
-}
-
 </style>
 </head>
 <body>
@@ -1062,34 +977,7 @@ body.realtime-sim-open #realtimeTab { display:none !important; }
 
 
 <!-- GERÇEK ZAMANLI ÜRETİM SEKME -->
-<button id="realtimeTab" type="button" onclick="openRealtimeProduction()" aria-label="Gerçek zamanlı üretim grafiğini aç">
-  <span class="rt-dot"></span> GERÇEK ZAMANLI ÜRETİM
-</button>
 
-<!-- GERÇEK ZAMANLI ÜRETİM GRAFİĞİ -->
-<div id="realtimeOverlay" aria-hidden="true">
-  <div id="realtimeTopBar">
-    <div id="realtimeTitleWrap">
-      <div id="realtimeTitleIcon">◔</div>
-      <div>
-        <div id="realtimeTitle">Gerçek Zamanlı Üretim</div>
-        <div id="realtimeSubtitle">EPİAŞ SAATLİK ÜRETİM DAĞILIMI • 24 SAAT</div>
-      </div>
-    </div>
-    <button id="realtimeClose" type="button" onclick="closeRealtimeProduction()">✕ HARİTAYA DÖN</button>
-  </div>
-  <div id="realtimeMeta">
-    <span id="realtimeDateLabel">Veri bekleniyor...</span>
-    <span id="realtimeTotalLabel">Toplam: -- MWh</span>
-  </div>
-  <div id="realtimeChartCard">
-    <div id="realtimeChartWrap">
-      <canvas id="realtimeChart"></canvas>
-      <div id="realtimeEmpty">EPİAŞ saatlik üretim verisi henüz yüklenmedi.</div>
-    </div>
-  </div>
-  <div id="realtimeLegendNote">Kaynaklar saatlik üretim enerjisini (MWh) gösterir. Veri, seçili EPİAŞ tarihi üzerinden oluşturulur.</div>
-</div>
 
 <!-- KAYNAK BİLGİLENDİRME MODALI -->
 <div id="resourceInfoModal">
@@ -1814,7 +1702,7 @@ function checkSearchEnter(e) {
   }
 
   // Arama kutusu Enter'a basılmadan önce doldurulmuşsa tüm EPİAŞ listesini de tara.
-  const epiasPlants = typeof window.getRealtimeEpiasPlants === 'function' ? (window.getRealtimeEpiasPlants() || []) : [];
+  const epiasPlants = Array.isArray(window.epiasPlantsData) ? window.epiasPlantsData : [];
   const epiasIdx = epiasPlants.findIndex(p => normalizeTR(p?.name || p?.p || '').includes(normQuery));
   if (epiasIdx !== -1) {
     window._searchPlantResults = epiasPlants.map((plant, idx) => ({ source:'epias', epiasIdx:idx, plant }));
@@ -1842,7 +1730,6 @@ function handleCityClick(idx) {
     const city = allCities[idx];
     document.getElementById("selCityName").innerText = city.n;
     document.getElementById("selectionOverlay").style.display = "flex";
-    updateRealtimeTabVisibility();
     document.getElementById("selCityTotal").innerText = city.totalMWh.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + " MWh";
 
     const sorted = [...allCities].sort((a,b) => b.totalMWh - a.totalMWh);
@@ -2142,27 +2029,16 @@ function resetZoomGraph() {
 }
 
 function varColor(varName) { return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
-function updateRealtimeTabVisibility() {
-  const login = document.getElementById('epiasLoginOverlay');
-  const selection = document.getElementById('selectionOverlay');
-  const sim = document.getElementById('simOverlay');
-  document.body.classList.toggle('realtime-login-locked', !!login && getComputedStyle(login).display !== 'none');
-  document.body.classList.toggle('realtime-selection-open', !!selection && getComputedStyle(selection).display !== 'none');
-  document.body.classList.toggle('realtime-sim-open', !!sim && getComputedStyle(sim).display !== 'none');
-}
 
 function closeSelection() {
   document.getElementById("selectionOverlay").style.display = "none";
-  updateRealtimeTabVisibility();
 }
 function closeSim() { 
     if (activeSimTimer) clearInterval(activeSimTimer);
     document.getElementById("simOverlay").style.display = "none"; 
     document.getElementById("selectionOverlay").style.display = "flex";
-    updateRealtimeTabVisibility();
 }
 
-updateRealtimeTabVisibility();
 
 // CANLI TELEMETRİ GÖRSELİ: EPİAŞ üretim/toplam verilerini ezmez.
 setInterval(() => {
@@ -2375,187 +2251,14 @@ setInterval(() => {
 
 
 
-/* GERÇEK ZAMANLI ÜRETİM GRAFİĞİ */
-let realtimeChartObj = null;
-let realtimeEpiasPlants = [];
-
-const realtimeGroups = [
-  { key:'hydro', label:'Hidro', color:'#27a9b7' },
-  { key:'wind', label:'Rüzgar', color:'#46dcb4' },
-  { key:'sun', label:'Güneş', color:'#ff8a00' },
-  { key:'lignite', label:'Linyit', color:'#9a5b0a' },
-  { key:'coal', label:'Taş Kömürü', color:'#b75a2a' },
-  { key:'importCoal', label:'İthal Kömür', color:'#c84b35' },
-  { key:'naturalGas', label:'Doğal Gaz', color:'#5969b9' },
-  { key:'geothermal', label:'Jeotermal', color:'#c85b5b' },
-  { key:'biomass', label:'Biyokütle', color:'#d6ad19' },
-  { key:'other', label:'Diğer', color:'#94a3b8' }
-];
-
-function realtimeGroupForType(type) {
-  if (type === 'dammedHydro' || type === 'river') return 'hydro';
-  if (realtimeGroups.some(g => g.key === type)) return type;
-  return 'other';
-}
-
-function getRealtimeHourlyData() {
-  const rows = Array.from({length:24}, (_, hour) => {
-    const row = { hour: `${String(hour).padStart(2,'0')}:00` };
-    realtimeGroups.forEach(g => row[g.key] = 0);
-    return row;
-  });
-
-  if (Array.isArray(realtimeEpiasPlants) && realtimeEpiasPlants.length) {
-    realtimeEpiasPlants.forEach(plant => {
-      const group = realtimeGroupForType(plant.type || plant.k);
-      const hourly = Array.isArray(plant.hourly) ? plant.hourly : [];
-      for (let h = 0; h < 24; h++) rows[h][group] += cleanVal(hourly[h]);
-    });
-    return rows;
-  }
-
-  if (typeof allCities === 'undefined' || !Array.isArray(allCities)) return rows;
-
-  allCities.forEach(city => {
-    (city.plants || []).forEach(plant => {
-      const group = realtimeGroupForType(plant.k);
-      const hourly = Array.isArray(plant.hourly) ? plant.hourly : [];
-      for (let h = 0; h < 24; h++) rows[h][group] += cleanVal(hourly[h]);
-    });
-  });
-  return rows;
-}
-
-function formatRealtimeMWh(value) {
-  return Number(value || 0).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-
-function updateRealtimeProductionChart() {
-  const canvas = document.getElementById('realtimeChart');
-  const overlay = document.getElementById('realtimeOverlay');
-  if (!canvas || !overlay) return;
-
-  const rows = getRealtimeHourlyData();
-  const hasData = rows.some(r => realtimeGroups.some(g => Number(r[g.key] || 0) > 0));
-  const empty = document.getElementById('realtimeEmpty');
-  if (empty) empty.style.display = hasData ? 'none' : 'flex';
-
-  const realtimeDateInput = document.getElementById('mapDateInput');
-  const dateValue = realtimeDateInput ? realtimeDateInput.value : '';
-  const dateLabel = document.getElementById('realtimeDateLabel');
-  const realtimeFormatDate = (dateStr) => {
-    if (!dateStr) return '--';
-    const parts = String(dateStr).split('-');
-    return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : dateStr;
-  };
-  if (dateLabel) dateLabel.textContent = dateValue ? `Veri tarihi: ${realtimeFormatDate(dateValue)}` : 'Veri tarihi: --';
-
-  const dayTotal = rows.reduce((sum,row) => sum + realtimeGroups.reduce((s,g) => s + Number(row[g.key] || 0), 0), 0);
-  const totalLabel = document.getElementById('realtimeTotalLabel');
-  if (totalLabel) totalLabel.textContent = `24 saat toplamı: ${formatRealtimeMWh(dayTotal)} MWh`;
-
-  if (realtimeChartObj) realtimeChartObj.destroy();
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  realtimeChartObj = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: rows.map(r => r.hour),
-      datasets: realtimeGroups.map(g => ({
-        label: g.label,
-        data: rows.map(r => Number(r[g.key] || 0)),
-        backgroundColor: g.color,
-        borderColor: g.color,
-        borderWidth: 0,
-        stack: 'production',
-        barPercentage: 0.86,
-        categoryPercentage: 0.9
-      }))
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 350 },
-      interaction: { mode:'index', intersect:false },
-      plugins: {
-        legend: {
-          position:'top',
-          align:'center',
-          labels: {
-            color:'#cbd5e1',
-            font:{family:'JetBrains Mono', size:9},
-            boxWidth:12,
-            boxHeight:8,
-            padding:10,
-            usePointStyle:false
-          }
-        },
-        tooltip: {
-          backgroundColor:'rgba(15,23,42,.96)',
-          titleFont:{family:'JetBrains Mono', size:10},
-          bodyFont:{family:'JetBrains Mono', size:9},
-          callbacks: {
-            label: function(context) {
-              const v = Number(context.raw || 0);
-              return ` ${context.dataset.label}: ${formatRealtimeMWh(v)} MWh`;
-            },
-            footer: function(items) {
-              const total = items.reduce((sum,item) => sum + Number(item.raw || 0), 0);
-              return `Saat toplamı: ${formatRealtimeMWh(total)} MWh`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          stacked:true,
-          grid:{color:'rgba(100,116,139,.22)', lineWidth:1},
-          ticks:{color:'#cbd5e1', font:{family:'JetBrains Mono', size:9}, maxRotation:55, minRotation:55},
-          title:{display:true, text:'Saat', color:'#94a3b8', font:{family:'JetBrains Mono', size:10, weight:'700'}}
-        },
-        y: {
-          stacked:true,
-          beginAtZero:true,
-          grid:{color:'rgba(100,116,139,.22)'},
-          ticks:{color:'#cbd5e1', font:{family:'JetBrains Mono', size:9}, callback:v => Number(v).toLocaleString('tr-TR')},
-          title:{display:true, text:'MWh', color:'#94a3b8', font:{family:'JetBrains Mono', size:10, weight:'700'}}
-        }
-      }
-    }
-  });
-}
-
-function openRealtimeProduction() {
-  const overlay = document.getElementById('realtimeOverlay');
-  const tab = document.getElementById('realtimeTab');
-  if (!overlay) return;
-  overlay.classList.add('open');
-  overlay.setAttribute('aria-hidden','false');
-  if (tab) tab.classList.add('active');
-  requestAnimationFrame(() => updateRealtimeProductionChart());
-}
-
-function closeRealtimeProduction() {
-  const overlay = document.getElementById('realtimeOverlay');
-  const tab = document.getElementById('realtimeTab');
-  if (!overlay) return;
-  overlay.classList.remove('open');
-  overlay.setAttribute('aria-hidden','true');
-  if (tab) tab.classList.remove('active');
-  if (realtimeChartObj) { realtimeChartObj.destroy(); realtimeChartObj = null; }
-}
-
-// Buton HTML içindeki onclick ile çalışabilsin diye fonksiyonları global alana aç.
-window.openRealtimeProduction = openRealtimeProduction;
-window.closeRealtimeProduction = closeRealtimeProduction;
-window.getRealtimeEpiasPlants = () => realtimeEpiasPlants;
+  let epiasPlantsData = [];
 
   function applyData(payload) {
     const plants = Array.isArray(payload?.plants) ? payload.plants : [];
     if (!plants.length) throw new Error('EPİAŞ yanıtında üretim kaydı bulunamadı.');
-    realtimeEpiasPlants = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
-    window.getRealtimeEpiasPlants = () => realtimeEpiasPlants;
+    epiasPlantsData = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
+    window.epiasPlantsData = epiasPlantsData;
+    epiasPlantsData = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
 
     const byName = new Map();
     plants.forEach(x => {
@@ -2614,10 +2317,6 @@ window.getRealtimeEpiasPlants = () => realtimeEpiasPlants;
 
     baseResourceTotals = {...totals};
     renderMapMarkers();
-
-    if (document.getElementById('realtimeOverlay')?.classList.contains('open')) {
-      updateRealtimeProductionChart();
-    }
 
     const badge = document.getElementById('epiasStatusText');
     badge.textContent = `BAĞLI • ${payload.date} • ${plants.length} kayıt • ${matched} eşleşme`;
@@ -2708,8 +2407,7 @@ window.getRealtimeEpiasPlants = () => realtimeEpiasPlants;
       if (!keepOverlay) {
         setTimeout(() => {
           overlay.style.display = 'none';
-          updateRealtimeTabVisibility();
-          hideProgress();
+                hideProgress();
           if (typeof map !== 'undefined' && map.invalidateSize) map.invalidateSize();
         }, 900);
       }
