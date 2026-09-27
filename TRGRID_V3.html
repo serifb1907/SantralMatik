@@ -895,53 +895,58 @@
 body.realtime-login-locked #realtimeTab, body.realtime-selection-open #realtimeTab, body.realtime-sim-open #realtimeTab { display:none !important; }
 #realtimeTab:hover, #realtimeTab.active { color:#001018; background:var(--neon-blue); border-color:var(--neon-blue); box-shadow:0 0 18px rgba(0,210,255,.38); }
 #realtimeTab .rt-dot { width:7px; height:7px; border-radius:50%; background:#10b981; box-shadow:0 0 8px rgba(16,185,129,.9); flex:0 0 auto; }
-#realtimeOverlay { position:fixed; inset:0; z-index:1000002; display:none; flex-direction:column; padding:0; background:#fff; color:#111827; font-family:Arial,Helvetica,sans-serif; box-sizing:border-box; overflow:hidden; }
+#realtimeOverlay { position:fixed; inset:0; z-index:1000002; display:none; flex-direction:column; padding:0; background:rgba(2,6,23,.985); color:#cbd5e1; font-family:Arial,Helvetica,sans-serif; box-sizing:border-box; overflow:hidden; }
 #realtimeOverlay.open { display:flex; }
-#realtimeTopBar { flex:0 0 auto; min-height:56px; display:flex; align-items:stretch; justify-content:space-between; gap:12px; border-bottom:1px solid #d7d7d7; background:#fff; padding:0 8px 0 4px; box-sizing:border-box; }
+#realtimeTopBar { flex:0 0 auto; min-height:56px; display:flex; align-items:stretch; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(0,210,255,.18); background:rgba(2,6,23,.96); padding:0 8px 0 12px; box-sizing:border-box; }
 #realtimeTitleWrap { display:flex; align-items:center; gap:8px; min-width:0; }
-#realtimeTitleIcon { font-size:20px; color:#0b78c8; }
-#realtimeTitle { font:700 16px Arial,Helvetica,sans-serif; color:#111; letter-spacing:0; }
-#realtimeSubtitle { margin-top:2px; font-size:11px; color:#777; }
-#realtimeClose { align-self:center; border:1px solid #0b78c8; background:#fff; color:#0b78c8; border-radius:4px; padding:7px 10px; cursor:pointer; font:700 11px Arial,sans-serif; }
-#realtimeClose:hover { background:#0b78c8; color:#fff; }
-#realtimeTopActions { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #ddd; background:#f7f7f7; min-height:38px; padding:0 4px; box-sizing:border-box; }
+#realtimeTitleIcon { font-size:20px; color:var(--neon-blue); }
+#realtimeTitle { font:700 16px Arial,Helvetica,sans-serif; color:#f1f5f9; letter-spacing:0; }
+#realtimeSubtitle { margin-top:2px; font-size:11px; color:#64748b; }
+#realtimeClose { align-self:center; border:1px solid rgba(0,210,255,.5); background:rgba(2,6,23,.7); color:#67e8f9; border-radius:4px; padding:7px 10px; cursor:pointer; font:700 11px Arial,sans-serif; }
+#realtimeClose:hover { background:var(--neon-blue); color:#001018; }
+#realtimeTopActions { display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(148,163,184,.16); background:rgba(15,23,42,.92); min-height:38px; padding:0 4px; box-sizing:border-box; }
 #realtimeViewTabs { display:flex; align-self:stretch; align-items:stretch; }
-.realtime-view-tab { min-width:76px; border:0; border-right:1px solid #ddd; background:transparent; color:#555; cursor:pointer; padding:0 14px; font:700 11px Arial,sans-serif; display:flex; align-items:center; justify-content:center; gap:5px; }
-.realtime-view-tab.active { color:#0645e5; background:#fff; box-shadow:inset 0 -2px 0 #0645e5; }
-.realtime-view-tab:hover { background:#fff; color:#0645e5; }
-#realtimeSourceMeta { display:flex; align-items:center; gap:14px; color:#333; font-size:10px; white-space:nowrap; }
+.realtime-view-tab { min-width:76px; border:0; border-right:1px solid rgba(148,163,184,.14); background:transparent; color:#94a3b8; cursor:pointer; padding:0 14px; font:700 11px Arial,sans-serif; display:flex; align-items:center; justify-content:center; gap:5px; }
+.realtime-view-tab.active { color:var(--neon-blue); background:rgba(2,8,23,.72); box-shadow:inset 0 -2px 0 var(--neon-blue); }
+.realtime-view-tab:hover { background:rgba(2,8,23,.72); color:var(--neon-blue); }
+#realtimeSourceMeta { display:none !important; }
 #realtimeSourceMeta .rt-meta-sep { color:#bbb; }
 #realtimeSourceMeta .rt-api { color:#111; font-weight:700; }
 #realtimeSourceMeta .rt-db-badge { background:#0b78c8; color:#fff; border-radius:3px; padding:2px 5px; font-weight:700; }
-#realtimeFilters { display:grid; grid-template-columns:230px 230px minmax(240px,330px) auto; align-items:end; gap:8px; padding:10px 6px 8px; background:#fff; border-bottom:1px solid #ddd; }
+#realtimeFilters { display:grid; grid-template-columns:190px minmax(220px,300px) auto; align-items:end; gap:10px; padding:10px 12px 8px; background:rgba(2,6,23,.94); border-bottom:1px solid rgba(0,210,255,.14); }
 .rt-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
-.rt-field label { font-size:11px; color:#111; }
+.rt-field label { font-size:10px; color:#94a3b8; letter-spacing:.35px; }
 .rt-date-row { display:flex; align-items:center; gap:4px; }
-.rt-date-row input, #realtimePlantSelect { height:30px; box-sizing:border-box; width:100%; border:1px solid #cfcfcf; border-radius:4px; background:#fff; color:#333; padding:5px 8px; font:12px Arial,sans-serif; outline:none; }
+.rt-date-row input, #realtimePlantSelect { height:30px; box-sizing:border-box; width:100%; border:1px solid #334155; border-radius:4px; background:#020817; color:#e2e8f0; padding:5px 8px; font:11px 'JetBrains Mono',monospace; outline:none; }
 .rt-date-row input:focus, #realtimePlantSelect:focus { border-color:#1677ff; box-shadow:0 0 0 1px #1677ff inset; }
-.rt-query-btn { height:30px; border:1px solid #1677ff; border-radius:4px; background:#fff; color:#0067d9; padding:0 10px; cursor:pointer; font:700 12px Arial,sans-serif; }
-.rt-query-btn:hover { background:#1677ff; color:#fff; }
-#realtimeTableMeta { padding:5px 5px 4px; font-size:11px; color:#555; background:#fff; }
-#realtimeTableWrap { flex:1 1 auto; min-height:0; overflow:auto; background:#fff; border-top:1px solid #d9d9d9; }
-#realtimeTable { border-collapse:collapse; width:max-content; min-width:100%; font:11px Arial,Helvetica,sans-serif; color:#222; }
-#realtimeTable th, #realtimeTable td { border:1px solid #d8d8d8; padding:4px 8px; white-space:nowrap; text-align:right; }
-#realtimeTable th { position:sticky; top:0; z-index:2; background:#f2f2f2; color:#111; font-weight:700; text-align:center; }
+.rt-query-btn { height:28px; width:auto; min-width:72px; border:1px solid rgba(0,210,255,.5); border-radius:4px; background:rgba(2,6,23,.8); color:#67e8f9; padding:0 11px; cursor:pointer; font:700 10px 'JetBrains Mono',monospace; }
+.rt-query-btn:hover { background:var(--neon-blue); color:#001018; }
+#realtimeTableMeta { padding:6px 12px 5px; font-size:10px; color:#94a3b8; background:rgba(2,6,23,.92); }
+#realtimeTableWrap { flex:1 1 auto; min-height:0; overflow:auto; background:rgba(2,6,23,.96); border-top:1px solid rgba(148,163,184,.14); }
+#realtimeTable { border-collapse:collapse; width:max-content; min-width:100%; font:11px Arial,Helvetica,sans-serif; color:#cbd5e1; }
+#realtimeTable th, #realtimeTable td { border:1px solid rgba(71,85,105,.45); padding:4px 8px; white-space:nowrap; text-align:right; }
+#realtimeTable th { position:sticky; top:0; z-index:2; background:#0f172a; color:#e2e8f0; font-weight:700; text-align:center; }
 #realtimeTable th:first-child, #realtimeTable th:nth-child(2), #realtimeTable td:first-child, #realtimeTable td:nth-child(2) { text-align:center; }
-#realtimeTable td:first-child, #realtimeTable td:nth-child(2) { background:#fafafa; }
-#realtimeTable tr:nth-child(even) td { background:#fcfcfc; }
-#realtimeTable tr:hover td { background:#f1f7ff; }
-#realtimeTable tfoot td { position:sticky; bottom:0; z-index:1; background:#ededed !important; font-weight:700; }
+#realtimeTable td:first-child, #realtimeTable td:nth-child(2) { background:rgba(15,23,42,.82); color:#cbd5e1; }
+#realtimeTable tr:nth-child(even) td { background:rgba(15,23,42,.55); }
+#realtimeTable tr:hover td { background:rgba(0,210,255,.08); }
+#realtimeTable tfoot td { position:sticky; bottom:0; z-index:1; background:#172033 !important; color:#f1f5f9; font-weight:700; }
 #realtimeTable .rt-negative { color:#333; }
 #realtimeTable .rt-zero { color:#777; }
 #realtimeTable .rt-total { font-weight:700; }
 #realtimeEmpty { display:none; align-items:center; justify-content:center; padding:60px 20px; color:#777; font-size:12px; }
-#realtimeChartCard { display:none; flex:1 1 auto; min-height:0; margin:0 6px 6px; border:1px solid #d8d8d8; background:#fff; padding:8px; box-sizing:border-box; }
+#realtimeStatus { display:none; margin:0 12px 7px; padding:7px 9px; min-width:230px; max-width:420px; border:1px solid rgba(0,210,255,.28); border-radius:6px; background:rgba(2,10,20,.88); color:#cbd5e1; font-size:10px; line-height:1.35; letter-spacing:.25px; box-shadow:0 0 12px rgba(0,0,0,.22); }
+#realtimeStatus.show { display:block; }
+#realtimeStatus.loading { color:#67e8f9; border-color:rgba(0,210,255,.55); }
+#realtimeStatus.success { color:#86efac; border-color:rgba(34,197,94,.5); }
+#realtimeStatus.error { color:#fca5a5; border-color:rgba(239,68,68,.5); }
+#realtimeChartCard { display:none; flex:1 1 auto; min-height:0; margin:0 8px 8px; border:1px solid rgba(0,210,255,.16); background:rgba(15,23,42,.72); padding:8px; box-sizing:border-box; }
 #realtimeChartWrap { position:relative; width:100%; height:100%; min-height:300px; }
 #realtimeChart { display:block; width:100% !important; height:100% !important; }
-#realtimeLegendNote { flex:0 0 auto; padding:5px 7px 7px; color:#777; font-size:10px; background:#fff; border-top:1px solid #ddd; }
-#realtimePagination { display:flex; justify-content:flex-end; align-items:center; gap:6px; padding:4px 6px; color:#666; font-size:10px; border-top:1px solid #ddd; background:#f8f8f8; }
-#realtimePagination .page-box { border:1px solid #1677ff; color:#1677ff; background:#fff; border-radius:3px; padding:2px 6px; font-weight:700; }
-#realtimePagination select { border:1px solid #ccc; border-radius:3px; background:#fff; font-size:10px; }
+#realtimeLegendNote { flex:0 0 auto; padding:5px 12px 7px; color:#64748b; font-size:10px; background:rgba(2,6,23,.96); border-top:1px solid rgba(148,163,184,.12); }
+#realtimePagination { display:flex; justify-content:flex-end; align-items:center; gap:6px; padding:4px 10px; color:#64748b; font-size:10px; border-top:1px solid rgba(148,163,184,.12); background:rgba(2,6,23,.96); }
+#realtimePagination .page-box { border:1px solid rgba(0,210,255,.55); color:#67e8f9; background:#020817; border-radius:3px; padding:2px 6px; font-weight:700; }
+#realtimePagination select { border:1px solid #334155; border-radius:3px; background:#020817; color:#cbd5e1; font-size:10px; }
 @media (max-width:900px) { #realtimeFilters { grid-template-columns:1fr 1fr; } #realtimeSourceMeta { display:none; } }
 @media (max-width:768px) { #realtimeTab { top:116px; left:8px; right:8px; transform:none; justify-content:center; } #realtimeTopBar { min-height:50px; padding-left:7px; } #realtimeTitle { font-size:14px; } #realtimeSubtitle { font-size:9px; } #realtimeClose { font-size:9px; padding:6px 7px; } #realtimeFilters { grid-template-columns:1fr; padding:8px; } #realtimeTopActions { min-height:36px; } .realtime-view-tab { min-width:68px; padding:0 10px; font-size:10px; } #realtimeTable { font-size:10px; } #realtimeTable th, #realtimeTable td { padding:4px 6px; } }
 </style>
@@ -1052,18 +1057,14 @@ body.realtime-login-locked #realtimeTab, body.realtime-selection-open #realtimeT
       <button class="realtime-view-tab active" id="realtimeTableTab" type="button">▦ TABLO</button>
       <button class="realtime-view-tab" id="realtimeGraphTab" type="button">◔ GRAFİK</button>
     </div>
-    <div id="realtimeSourceMeta">
-      <span class="rt-api">API</span><span class="rt-meta-sep">│</span>
-      <span>▣ Veri Kaynağı: <span class="rt-db-badge">TEİAŞ</span></span>
-      <span class="rt-meta-sep">│</span><span>◷ Son Güncelleme Tarihi: <strong id="realtimeUpdatedAt">--</strong></span>
-    </div>
+    
   </div>
   <div id="realtimeFilters">
-    <div class="rt-field"><label for="realtimeStartDate">Başlangıç Tarihi ⓘ</label><div class="rt-date-row"><input id="realtimeStartDate" type="date"><span aria-hidden="true">▣</span></div></div>
-    <div class="rt-field"><label for="realtimeEndDate">Bitiş Tarihi</label><div class="rt-date-row"><input id="realtimeEndDate" type="date"><span aria-hidden="true">▣</span></div></div>
-    <div class="rt-field"><label for="realtimePlantSelect">Santral Adı</label><select id="realtimePlantSelect"><option value="ALL">Tümü</option></select></div>
+    <div class="rt-field"><label for="realtimeDate">VERİ TARİHİ</label><div class="rt-date-row"><input id="realtimeDate" type="date"></div></div>
+    <div class="rt-field"><label for="realtimePlantSelect">SANTRAL ADI</label><select id="realtimePlantSelect"><option value="ALL">Tümü</option></select></div>
     <div class="rt-field"><label>&nbsp;</label><button id="realtimeQueryBtn" class="rt-query-btn" type="button">Sorgula</button></div>
   </div>
+  <div id="realtimeStatus" aria-live="polite"></div>
   <div id="realtimeTableMeta">24 adet kayıt bulundu</div>
   <div id="realtimeTableWrap">
     <table id="realtimeTable" aria-label="Gerçek zamanlı elektrik üretim tablos"><thead></thead><tbody></tbody><tfoot></tfoot></table>
@@ -2408,12 +2409,11 @@ function updateRealtimeTable(){
   const table=document.getElementById('realtimeTable'); if(!table)return; const rows=getRealtimeHourlyData();
   const empty=document.getElementById('realtimeEmpty'); if(empty)empty.style.display=rows.some(r=>r.total>0)?'none':'flex';
   const heads=['Tarih','Saat','Toplam (MWh)',...realtimeTableSources.map(g=>g.label)];
-  const d=document.getElementById('realtimeStartDate')?.value||document.getElementById('mapDateInput')?.value||'';
+  const d=document.getElementById('realtimeDate')?.value||document.getElementById('mapDateInput')?.value||'';
   table.querySelector('thead').innerHTML=`<tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr>`;
   table.querySelector('tbody').innerHTML=rows.map(r=>{const vals=[realtimeFormatDate(d),r.hour,r.total,...realtimeTableSources.map(g=>r[g.key]||0)];return`<tr>${vals.map((v,i)=>i<2?`<td>${v}</td>`:`<td class="${Number(v)===0?'rt-zero':''}">${formatRealtimeMWh(v)}</td>`).join('')}</tr>`}).join('');
   const totals={}; realtimeTableSources.forEach(g=>totals[g.key]=rows.reduce((s,r)=>s+Number(r[g.key]||0),0)); const grand=rows.reduce((s,r)=>s+Number(r.total||0),0);
   table.querySelector('tfoot').innerHTML=`<tr><td>Toplam</td><td></td><td class="rt-total">${formatRealtimeMWh(grand)}</td>${realtimeTableSources.map(g=>`<td class="rt-total">${formatRealtimeMWh(totals[g.key])}</td>`).join('')}</tr>`;
-  const u=document.getElementById('realtimeUpdatedAt'); if(u)u.textContent=new Date().toLocaleString('tr-TR');
 }
 function updateRealtimeProductionChart(){
   const canvas=document.getElementById('realtimeChart'); if(!canvas)return; const rows=getRealtimeHourlyData(); if(realtimeChartObj)realtimeChartObj.destroy();
@@ -2427,12 +2427,31 @@ function setRealtimeView(view){
   if(note)note.textContent=isTable?'Kaynaklar saatlik üretim enerjisini (MWh) gösterir. Veriler seçilen tarih için EPİAŞ üzerinden alınır.':'Grafik, seçilen tarih ve santral filtresine göre saatlik üretim miktarlarını gösterir.';
   if(isTable)updateRealtimeTable();else requestAnimationFrame(updateRealtimeProductionChart);
 }
-function syncRealtimeDates(){const d=document.getElementById('mapDateInput')?.value||document.getElementById('realtimeStartDate')?.value||''; const s=document.getElementById('realtimeStartDate'),e=document.getElementById('realtimeEndDate');if(s)s.value=d;if(e)e.value=d;}
+function syncRealtimeDates(){const d=document.getElementById('mapDateInput')?.value||''; const r=document.getElementById('realtimeDate');if(r)r.value=d;}
+function setRealtimeStatus(message, state='loading', autoHide=false){
+  const el=document.getElementById('realtimeStatus'); if(!el)return;
+  el.innerHTML=message; el.className=`show ${state}`;
+  if(el._timer)clearTimeout(el._timer);
+  if(autoHide)el._timer=setTimeout(()=>{el.className='';},6500);
+}
 function initRealtimeProductionUI(){
-  const tt=document.getElementById('realtimeTableTab'),gt=document.getElementById('realtimeGraphTab'),sel=document.getElementById('realtimePlantSelect'),s=document.getElementById('realtimeStartDate'),e=document.getElementById('realtimeEndDate'),q=document.getElementById('realtimeQueryBtn');
+  const tt=document.getElementById('realtimeTableTab'),gt=document.getElementById('realtimeGraphTab'),sel=document.getElementById('realtimePlantSelect'),dInput=document.getElementById('realtimeDate'),q=document.getElementById('realtimeQueryBtn');
   if(!tt||tt.dataset.ready)return; tt.dataset.ready='1'; tt.addEventListener('click',()=>setRealtimeView('table')); gt.addEventListener('click',()=>setRealtimeView('graph'));
-  sel.addEventListener('change',()=>{updateRealtimeTable();if(gt.classList.contains('active'))updateRealtimeProductionChart();}); s.addEventListener('change',()=>{if(e)e.value=s.value;});
-  q.addEventListener('click',()=>{const d=s?.value||'',m=document.getElementById('mapDateInput');if(m&&d&&m.value!==d){m.value=d;m.dispatchEvent(new Event('change',{bubbles:true}));}else{updateRealtimeTable();if(gt.classList.contains('active'))updateRealtimeProductionChart();}});
+  sel.addEventListener('change',()=>{updateRealtimeTable();if(gt.classList.contains('active'))updateRealtimeProductionChart();});
+  q.addEventListener('click',async()=>{
+    const d=dInput?.value||'',m=document.getElementById('mapDateInput');
+    if(!d){setRealtimeStatus('⚠ Lütfen bir tarih seçin.','error');return;}
+    if(m)m.value=d;
+    setRealtimeStatus(`⟳ ${formatTRDate(d)} tarihine ait veriler sorgulanıyor...<br>EPİAŞ verileri güncelleniyor, lütfen bekleyiniz.`,'loading');
+    if(epiasSession){
+      const ok=await fetchForDate(d,true);
+      if(ok)setRealtimeStatus(`✓ ${formatTRDate(d)} tarihine ait üretim verileri güncellendi.`,'success',true);
+      else setRealtimeStatus(`⚠ ${formatTRDate(d)} tarihine ait veriler alınamadı.`,'error');
+    }else{
+      setRealtimeStatus(`ℹ ${formatTRDate(d)} tarihi seçildi.<br>EPİAŞ bağlantısı kurulmuşsa Sorgula ile veriler güncellenecektir.`,'loading',true);
+      updateRealtimeTable(); if(gt.classList.contains('active'))updateRealtimeProductionChart();
+    }
+  });
   syncRealtimeDates(); setRealtimeView('table');
 }
 function openRealtimeProduction(){const o=document.getElementById('realtimeOverlay'),t=document.getElementById('realtimeTab');if(!o)return;o.classList.add('open');o.setAttribute('aria-hidden','false');if(t)t.classList.add('active');initRealtimeProductionUI();populateRealtimePlantSelect();syncRealtimeDates();requestAnimationFrame(updateRealtimeTable);}
