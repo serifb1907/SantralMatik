@@ -2076,6 +2076,7 @@ setInterval(() => {
         </div>
         <div id="epiasProgressLabel" style="margin-top:5px;font:8px 'JetBrains Mono';color:#64748b;">Başlatılıyor...</div>
       </div>
+      <div style="padding:7px 9px;border:1px solid #1e3a50;background:rgba(148,163,184,.04);border-radius:5px;color:#94a3b8;font-size:8px;line-height:1.5;">🔒 EPİAŞ giriş bilgileriniz yalnızca veri sorgulaması için anlık olarak kullanılır; uygulama tarafından kalıcı olarak saklanmaz.</div>
       <div id="epiasElectricalInfo" style="margin-top:4px;padding:9px 10px;border:1px solid #123047;background:rgba(0,210,255,.045);border-radius:5px;color:#7dd3fc;font-size:9px;line-height:1.55;min-height:42px;box-sizing:border-box;transition:opacity .25s ease;">
         ⚡ <span id="epiasElectricalInfoText">Elektrik şebekelerinde nominal frekans 50 Hz'dir.</span>
       </div>
@@ -2414,6 +2415,7 @@ setInterval(() => {
       return true;
     } catch (e) {
       console.error(e);
+      pass.value = '';
       setMapDateStatus(
         `⚠ ${formatTRDate(targetDate)} tarihine geçiş başarısız.<br>EPİAŞ verileri alınamadı.`,
         'error',
