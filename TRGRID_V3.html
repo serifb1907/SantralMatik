@@ -911,44 +911,44 @@ body.realtime-sim-open #realtimeTab { display:none !important; }
 #realtimeOverlay {
   position:fixed; inset:0; z-index:1000002; display:none;
   flex-direction:column; padding:18px 32px 22px;
-  background:linear-gradient(180deg,#f7f7f7 0%,#ffffff 100%);
-  color:#0f172a; font-family:'JetBrains Mono',monospace;
+  background:radial-gradient(circle at center, rgba(1, 10, 25, 0.98) 0%, rgba(1, 4, 9, 1) 100%);
+  color:#fff; font-family:'JetBrains Mono',monospace;
   box-sizing:border-box; overflow:hidden;
 }
 #realtimeOverlay.open { display:flex; }
 #realtimeTopBar {
   flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
-  min-height:48px; border-bottom:1px solid #d7dce2; padding:0 2px 9px;
+  min-height:48px; border-bottom:1px solid rgba(0,210,255,.16); padding:0 2px 9px;
 }
 #realtimeTitleWrap { display:flex; align-items:center; gap:10px; min-width:0; }
 #realtimeTitleIcon { font-size:24px; color:#0ea5e9; }
-#realtimeTitle { font:700 22px 'Orbitron',sans-serif; color:#334155; letter-spacing:.3px; }
-#realtimeSubtitle { margin-top:3px; font-size:9px; color:#94a3b8; letter-spacing:.4px; }
+#realtimeTitle { font:700 22px 'Orbitron',sans-serif; color:#e2e8f0; letter-spacing:.3px; text-shadow:0 0 10px rgba(0,210,255,.18); }
+#realtimeSubtitle { margin-top:3px; font-size:9px; color:#64748b; letter-spacing:.4px; }
 #realtimeClose {
-  border:1px solid #cbd5e1; background:#fff; color:#475569; border-radius:5px;
+  border:1px solid rgba(247,37,133,.7); background:transparent; color:var(--neon-pink); border-radius:5px;
   padding:7px 10px; cursor:pointer; font:700 10px 'JetBrains Mono',monospace;
   transition:.2s ease;
 }
-#realtimeClose:hover { background:#0f172a; color:#fff; border-color:#0f172a; }
+#realtimeClose:hover { background:var(--neon-pink); color:#fff; border-color:var(--neon-pink); box-shadow:0 0 15px rgba(247,37,133,.35); }
 #realtimeMeta {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
-  padding:8px 2px 6px; color:#64748b; font-size:9px;
+  padding:8px 2px 6px; color:#94a3b8; font-size:9px;
 }
-#realtimeDateLabel { font-weight:700; color:#475569; }
-#realtimeTotalLabel { color:#0f766e; font-weight:700; }
+#realtimeDateLabel { font-weight:700; color:#cbd5e1; }
+#realtimeTotalLabel { color:var(--neon-green); font-weight:700; text-shadow:0 0 8px rgba(16,185,129,.2); }
 #realtimeChartCard {
-  position:relative; flex:1 1 auto; min-height:0; background:#fff;
-  border:1px solid #d9dde3; border-radius:6px; box-shadow:0 4px 14px rgba(15,23,42,.08);
+  position:relative; flex:1 1 auto; min-height:0; background:rgba(5, 12, 28, 0.72);
+  border:1px solid rgba(0,210,255,.16); border-radius:8px; box-shadow:inset 0 0 25px rgba(0,210,255,.04), 0 0 20px rgba(0,0,0,.35);
   padding:10px 12px 6px; box-sizing:border-box; overflow:hidden;
 }
 #realtimeChartWrap { position:relative; width:100%; height:100%; min-height:0; }
 #realtimeChart { display:block; width:100% !important; height:100% !important; }
 #realtimeEmpty {
   position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-  color:#64748b; font-size:11px; text-align:center; pointer-events:none;
+  color:#94a3b8; font-size:11px; text-align:center; pointer-events:none;
 }
 #realtimeLegendNote {
-  flex:0 0 auto; padding-top:7px; color:#94a3b8; font-size:8px; line-height:1.4;
+  flex:0 0 auto; padding-top:7px; color:#64748b; font-size:8px; line-height:1.4;
 }
 @media (max-width:768px) {
   #realtimeTab { top:116px; left:8px; right:8px; transform:none; justify-content:center; }
@@ -2453,7 +2453,7 @@ function updateRealtimeProductionChart() {
           position:'top',
           align:'center',
           labels: {
-            color:'#475569',
+            color:'#cbd5e1',
             font:{family:'JetBrains Mono', size:9},
             boxWidth:12,
             boxHeight:8,
@@ -2480,16 +2480,16 @@ function updateRealtimeProductionChart() {
       scales: {
         x: {
           stacked:true,
-          grid:{color:'rgba(148,163,184,.25)', lineWidth:1},
-          ticks:{color:'#334155', font:{family:'JetBrains Mono', size:9}, maxRotation:55, minRotation:55},
-          title:{display:true, text:'Saat', color:'#0f172a', font:{family:'JetBrains Mono', size:10, weight:'700'}}
+          grid:{color:'rgba(100,116,139,.22)', lineWidth:1},
+          ticks:{color:'#cbd5e1', font:{family:'JetBrains Mono', size:9}, maxRotation:55, minRotation:55},
+          title:{display:true, text:'Saat', color:'#94a3b8', font:{family:'JetBrains Mono', size:10, weight:'700'}}
         },
         y: {
           stacked:true,
           beginAtZero:true,
-          grid:{color:'rgba(148,163,184,.25)'},
-          ticks:{color:'#334155', font:{family:'JetBrains Mono', size:9}, callback:v => Number(v).toLocaleString('tr-TR')},
-          title:{display:true, text:'MWh', color:'#0f172a', font:{family:'JetBrains Mono', size:10, weight:'700'}}
+          grid:{color:'rgba(100,116,139,.22)'},
+          ticks:{color:'#cbd5e1', font:{family:'JetBrains Mono', size:9}, callback:v => Number(v).toLocaleString('tr-TR')},
+          title:{display:true, text:'MWh', color:'#94a3b8', font:{family:'JetBrains Mono', size:10, weight:'700'}}
         }
       }
     }
