@@ -57,7 +57,7 @@
     #searchDropdown {
       display: none; position: absolute; top: 38px; left: 0; width: 100%;
       max-height: 260px; overflow-y: auto; background: rgba(2, 6, 23, 0.98);
-      border: 1px solid var(--neon-blue); border-radius: 6px; z-index: 10002;
+      border: 1px solid var(--neon-blue); border-radius: 6px; z-index: 10050;
       box-shadow: 0 0 25px rgba(0, 210, 255, 0.25);
     }
     #searchDropdown::-webkit-scrollbar { width: 4px; }
@@ -894,6 +894,11 @@
   box-shadow:0 0 18px rgba(0,0,0,.35), inset 0 0 12px rgba(0,210,255,.04);
   backdrop-filter:blur(12px); transition:.2s ease;
 }
+/* Gerçek zamanlı üretim yalnızca ana harita ekranında görünür. */
+body.realtime-login-locked #realtimeTab,
+body.realtime-selection-open #realtimeTab,
+body.realtime-sim-open #realtimeTab { display:none !important; }
+
 #realtimeTab:hover, #realtimeTab.active {
   color:#001018; background:var(--neon-blue); border-color:var(--neon-blue);
   box-shadow:0 0 18px rgba(0,210,255,.38);
@@ -1603,48 +1608,132 @@ function filterSearch(e) {
     return;
   }
 
-  // İl sonuçları
+  // TÜM 81 İL: Sonuç sayısını yapay olarak 6 ile sınırlamıyoruz.
   const cityMatches = allCities
     .map((city, idx) => ({ city, idx }))
     .filter(item => normalizeTR(item.city.n).includes(normQuery));
 
-  // Üretim yapan santral sonuçları. Aynı santral adının farklı illerde bulunması
-  // durumunda il adı da gösterilir; böylece kullanıcı doğru tesisi seçebilir.
-  const plantMatches = [];
+  // Haritadaki sabit tesis listesi: üretimi 0 olsa bile aranabilir.
+  const staticPlantMatches = [];
   allCities.forEach((city, cityIdx) => {
     (city.plants || []).forEach((plant, plantIdx) => {
-      if (cleanVal(plant.v) <= 0) return;
       if (normalizeTR(plant.p).includes(normQuery)) {
-        plantMatches.push({ city, cityIdx, plant, plantIdx });
+        staticPlantMatches.push({ city, cityIdx, plant, plantIdx, source:'map' });
       }
     });
   });
 
+  // EPİAŞ'ın döndürdüğü TÜM üretim kayıtları: yalnızca o gün üretim yapanları değil,
+  // EPİAŞ listesindeki sıfır üretimli tesisleri de aramaya dahil ediyoruz.
+  const epiasPlants = typeof window.getRealtimeEpiasPlants === 'function'
+    ? (window.getRealtimeEpiasPlants() || [])
+    : [];
+  const epiasPlantMatches = epiasPlants
+    .map((plant, epiasIdx) => ({ plant, epiasIdx, source:'epias' }))
+    .filter(item => normalizeTR(item.plant?.name || item.plant?.p || '').includes(normQuery));
+
+  // Aynı tesis iki kaynaktan geliyorsa tek kez göster.
+  const seen = new Set();
+  const plantMatches = [];
+  [...staticPlantMatches, ...epiasPlantMatches].forEach(m => {
+    const name = m.source === 'epias' ? (m.plant.name || m.plant.p || '') : m.plant.p;
+    const cityName = m.source === 'map' ? m.city.n : getPlantLocationName(m.plant);
+    const key = normalizeTR(name) + '|' + normalizeTR(cityName);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    plantMatches.push(m);
+  });
+
   if (cityMatches.length === 0 && plantMatches.length === 0) {
-    dropdown.innerHTML = `<div style="padding:10px 12px;font-family:'JetBrains Mono';font-size:11px;color:#94a3b8;">Eşleşen il veya üretim yapan santral bulunamadı</div>`;
+    dropdown.innerHTML = `<div style="padding:10px 12px;font-family:'JetBrains Mono';font-size:11px;color:#94a3b8;">Eşleşen il veya tesis bulunamadı</div>`;
     dropdown.style.display = "block";
     return;
   }
 
-  const cityHtml = cityMatches.slice(0, 6).map(m => `
+  const cityHtml = cityMatches.map(m => `
     <div onclick="selectCityFromSearch(${m.idx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:11px;cursor:pointer;border-bottom:1px solid rgba(0,210,255,0.12);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(0,210,255,.15)'" onmouseout="this.style.background='transparent'">
       <span>📍 ${m.city.n}</span>
       <small style="color:var(--neon-yellow);font-weight:bold;white-space:nowrap;">${cleanVal(m.city.totalMWh).toFixed(0)} MWh</small>
     </div>
   `).join('');
 
-  const plantHtml = plantMatches.slice(0, 8).map(m => `
-    <div onclick="selectPlantFromSearch(${m.cityIdx},${m.plantIdx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:10px;cursor:pointer;border-bottom:1px solid rgba(16,185,129,.14);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(16,185,129,.12)'" onmouseout="this.style.background='transparent'">
-      <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${m.plant.p} <small style="color:#64748b;">[${m.city.n}]</small></span>
-      <small style="color:var(--neon-green);font-weight:bold;white-space:nowrap;">${cleanVal(m.plant.v).toFixed(0)} MWh</small>
-    </div>
-  `).join('');
+  const plantHtml = plantMatches.map((m, resultIdx) => {
+    const name = m.source === 'epias' ? (m.plant.name || m.plant.p || 'İsimsiz Tesis') : m.plant.p;
+    const value = m.source === 'epias' ? cleanVal(m.plant.dailyTotal) : cleanVal(m.plant.v);
+    const location = m.source === 'map' ? m.city.n : getPlantLocationName(m.plant);
+    const locationText = location ? `[${location}]` : '[EPİAŞ]';
+    return `
+      <div onclick="selectSearchPlantResult(${resultIdx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:10px;cursor:pointer;border-bottom:1px solid rgba(16,185,129,.14);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(16,185,129,.12)'" onmouseout="this.style.background='transparent'">
+        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${name} <small style="color:#64748b;">${locationText}</small></span>
+        <small style="color:var(--neon-green);font-weight:bold;white-space:nowrap;">${value.toFixed(0)} MWh</small>
+      </div>`;
+  }).join('');
+
+  // Seçilen arama sonucunu Enter ile de kullanabilmek için geçici sonuç listesini sakla.
+  window._searchPlantResults = plantMatches;
 
   dropdown.innerHTML = `
-    ${cityHtml ? `<div style="padding:5px 10px;background:rgba(0,210,255,.06);color:#38bdf8;font:700 8px 'JetBrains Mono';letter-spacing:1px;">İLLER</div>${cityHtml}` : ''}
-    ${plantHtml ? `<div style="padding:5px 10px;background:rgba(16,185,129,.06);color:#34d399;font:700 8px 'JetBrains Mono';letter-spacing:1px;">ÜRETİM YAPAN SANTRALLER</div>${plantHtml}` : ''}
+    ${cityHtml ? `<div style="padding:5px 10px;background:rgba(0,210,255,.06);color:#38bdf8;font:700 8px 'JetBrains Mono';letter-spacing:1px;">TÜM İLLER (${cityMatches.length})</div>${cityHtml}` : ''}
+    ${plantHtml ? `<div style="padding:5px 10px;background:rgba(16,185,129,.06);color:#34d399;font:700 8px 'JetBrains Mono';letter-spacing:1px;">TESİSLER (${plantMatches.length})</div>${plantHtml}` : ''}
   `;
   dropdown.style.display = "block";
+}
+
+function getPlantLocationName(plant) {
+  if (!plant) return '';
+  return String(
+    plant.city || plant.province || plant.il || plant.ilAdi || plant.provinceName || plant.locationCity || ''
+  ).trim();
+}
+
+function selectSearchPlantResult(resultIdx) {
+  const result = (window._searchPlantResults || [])[resultIdx];
+  if (!result) return;
+
+  if (result.source === 'map') {
+    selectPlantFromSearch(result.cityIdx, result.plantIdx);
+    return;
+  }
+
+  const plant = result.plant || {};
+  const name = plant.name || plant.p || 'İsimsiz Tesis';
+  const epiasLocation = normalizeTR(getPlantLocationName(plant));
+  let cityIdx = -1;
+
+  // EPİAŞ kaydında il bilgisi varsa doğrudan haritaya bağla.
+  if (epiasLocation) {
+    cityIdx = allCities.findIndex(c => normalizeTR(c.n) === epiasLocation || normalizeTR(c.n).includes(epiasLocation) || epiasLocation.includes(normalizeTR(c.n)));
+  }
+
+  // İl bilgisi yoksa tesis adından mevcut harita tesisleri arasında eşleştirmeyi dene.
+  if (cityIdx === -1) {
+    const plantKey = normalizeTR(name);
+    for (let i = 0; i < allCities.length && cityIdx === -1; i++) {
+      const found = (allCities[i].plants || []).some(p => normalizeTR(p.p) === plantKey || normalizeTR(p.p).includes(plantKey) || plantKey.includes(normalizeTR(p.p)));
+      if (found) cityIdx = i;
+    }
+  }
+
+  document.getElementById("citySearchInput").value = name;
+  document.getElementById("searchDropdown").style.display = "none";
+
+  if (cityIdx !== -1) {
+    const city = allCities[cityIdx];
+    map.flyTo(city.c, 9, { duration: 1.2 });
+    handleCityClick(cityIdx);
+  } else {
+    // EPİAŞ kaydında konum bilgisi yoksa en azından arama sonucunu koru.
+    // Bu durumda haritada rastgele bir konuma uçmak yerine kullanıcıya açıkça bilgi veriyoruz.
+    const loc = getPlantLocationName(plant);
+    setTimeout(() => {
+      const status = document.getElementById('mapDateStatus');
+      if (status) {
+        status.innerHTML = `⚡ ${name} bulundu. ${loc ? `${loc} bilgisi mevcut ancak harita eşlemesi yapılamadı.` : 'EPİAŞ kaydında il bilgisi bulunmadığı için harita konumu eşleştirilemedi.'}`;
+        status.className = 'show loading';
+        setTimeout(() => status.className = '', 5000);
+      }
+    }, 0);
+  }
 }
 
 function selectPlantFromSearch(cityIdx, plantIdx) {
@@ -1683,12 +1772,24 @@ function checkSearchEnter(e) {
     return;
   }
 
-  for (let i = 0; i < allCities.length; i++) {
-    const plantIdx = (allCities[i].plants || []).findIndex(p => cleanVal(p.v) > 0 && normalizeTR(p.p).includes(normQuery));
-    if (plantIdx !== -1) {
-      selectPlantFromSearch(i, plantIdx);
-      return;
-    }
+  // Önce mevcut arama sonuçlarından herhangi bir tesisi seç.
+  const results = window._searchPlantResults || [];
+  const exactOrPartial = results.findIndex(r => {
+    const name = r.source === 'epias' ? (r.plant.name || r.plant.p || '') : r.plant.p;
+    return normalizeTR(name).includes(normQuery);
+  });
+  if (exactOrPartial !== -1) {
+    selectSearchPlantResult(exactOrPartial);
+    return;
+  }
+
+  // Arama kutusu Enter'a basılmadan önce doldurulmuşsa tüm EPİAŞ listesini de tara.
+  const epiasPlants = typeof window.getRealtimeEpiasPlants === 'function' ? (window.getRealtimeEpiasPlants() || []) : [];
+  const epiasIdx = epiasPlants.findIndex(p => normalizeTR(p?.name || p?.p || '').includes(normQuery));
+  if (epiasIdx !== -1) {
+    window._searchPlantResults = epiasPlants.map((plant, idx) => ({ source:'epias', epiasIdx:idx, plant }));
+    selectSearchPlantResult(epiasIdx);
+    return;
   }
 }
 
@@ -1711,6 +1812,7 @@ function handleCityClick(idx) {
     const city = allCities[idx];
     document.getElementById("selCityName").innerText = city.n;
     document.getElementById("selectionOverlay").style.display = "flex";
+    updateRealtimeTabVisibility();
     document.getElementById("selCityTotal").innerText = city.totalMWh.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + " MWh";
 
     const sorted = [...allCities].sort((a,b) => b.totalMWh - a.totalMWh);
@@ -2010,12 +2112,27 @@ function resetZoomGraph() {
 }
 
 function varColor(varName) { return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
-function closeSelection() { document.getElementById("selectionOverlay").style.display = "none"; }
+function updateRealtimeTabVisibility() {
+  const login = document.getElementById('epiasLoginOverlay');
+  const selection = document.getElementById('selectionOverlay');
+  const sim = document.getElementById('simOverlay');
+  document.body.classList.toggle('realtime-login-locked', !!login && getComputedStyle(login).display !== 'none');
+  document.body.classList.toggle('realtime-selection-open', !!selection && getComputedStyle(selection).display !== 'none');
+  document.body.classList.toggle('realtime-sim-open', !!sim && getComputedStyle(sim).display !== 'none');
+}
+
+function closeSelection() {
+  document.getElementById("selectionOverlay").style.display = "none";
+  updateRealtimeTabVisibility();
+}
 function closeSim() { 
     if (activeSimTimer) clearInterval(activeSimTimer);
     document.getElementById("simOverlay").style.display = "none"; 
     document.getElementById("selectionOverlay").style.display = "flex";
+    updateRealtimeTabVisibility();
 }
+
+updateRealtimeTabVisibility();
 
 // CANLI TELEMETRİ GÖRSELİ: EPİAŞ üretim/toplam verilerini ezmez.
 setInterval(() => {
@@ -2293,9 +2410,15 @@ function updateRealtimeProductionChart() {
   const empty = document.getElementById('realtimeEmpty');
   if (empty) empty.style.display = hasData ? 'none' : 'flex';
 
-  const dateValue = typeof mapDate !== 'undefined' && mapDate ? mapDate.value : '';
+  const realtimeDateInput = document.getElementById('mapDateInput');
+  const dateValue = realtimeDateInput ? realtimeDateInput.value : '';
   const dateLabel = document.getElementById('realtimeDateLabel');
-  if (dateLabel) dateLabel.textContent = dateValue ? `Veri tarihi: ${formatTRDate(dateValue)}` : 'Veri tarihi: --';
+  const realtimeFormatDate = (dateStr) => {
+    if (!dateStr) return '--';
+    const parts = String(dateStr).split('-');
+    return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : dateStr;
+  };
+  if (dateLabel) dateLabel.textContent = dateValue ? `Veri tarihi: ${realtimeFormatDate(dateValue)}` : 'Veri tarihi: --';
 
   const dayTotal = rows.reduce((sum,row) => sum + realtimeGroups.reduce((s,g) => s + Number(row[g.key] || 0), 0), 0);
   const totalLabel = document.getElementById('realtimeTotalLabel');
@@ -2393,10 +2516,16 @@ function closeRealtimeProduction() {
   if (realtimeChartObj) { realtimeChartObj.destroy(); realtimeChartObj = null; }
 }
 
+// Buton HTML içindeki onclick ile çalışabilsin diye fonksiyonları global alana aç.
+window.openRealtimeProduction = openRealtimeProduction;
+window.closeRealtimeProduction = closeRealtimeProduction;
+window.getRealtimeEpiasPlants = () => realtimeEpiasPlants;
+
   function applyData(payload) {
     const plants = Array.isArray(payload?.plants) ? payload.plants : [];
     if (!plants.length) throw new Error('EPİAŞ yanıtında üretim kaydı bulunamadı.');
     realtimeEpiasPlants = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
+    window.getRealtimeEpiasPlants = () => realtimeEpiasPlants;
 
     const byName = new Map();
     plants.forEach(x => {
@@ -2549,6 +2678,7 @@ function closeRealtimeProduction() {
       if (!keepOverlay) {
         setTimeout(() => {
           overlay.style.display = 'none';
+          updateRealtimeTabVisibility();
           hideProgress();
           if (typeof map !== 'undefined' && map.invalidateSize) map.invalidateSize();
         }, 900);
