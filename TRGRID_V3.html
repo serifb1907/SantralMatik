@@ -54,6 +54,12 @@
       color: #fff; font-family: 'JetBrains Mono'; font-size: 11px; width: 160px;
     }
     #citySearchInput::placeholder { color: #64748b; }
+    #clearCitySearch {
+      display:none; background:transparent; border:none; color:#64748b; cursor:pointer;
+      font-family:'JetBrains Mono'; font-size:14px; line-height:1; padding:1px 0 1px 7px;
+      transition:color .2s, text-shadow .2s;
+    }
+    #clearCitySearch:hover { color:#ff2d8d; text-shadow:0 0 8px rgba(255,45,141,.7); }
     #searchDropdown {
       display: none; position: absolute; top: 38px; left: 0; width: 100%;
       max-height: 260px; overflow-y: auto; background: rgba(2, 6, 23, 0.98);
@@ -996,7 +1002,8 @@ body.realtime-sim-open #realtimeTab { display:none !important; }
 <!-- HIZLI ARAMA -->
 <div id="searchBoxWrapper">
   <span style="color:var(--neon-blue); margin-right:8px; font-size:13px;">🔍</span>
-  <input type="text" id="citySearchInput" placeholder="İl / santral ara (Örn: İzmir, Soma)..." oninput="filterSearch(event)" onkeydown="checkSearchEnter(event)">
+  <input type="text" id="citySearchInput" placeholder="İl / Santral ara" oninput="filterSearch(event)" onkeydown="checkSearchEnter(event)">
+  <button type="button" id="clearCitySearch" aria-label="Aramayı temizle" title="Temizle" onclick="clearCitySearch(event)">×</button>
   <div id="searchDropdown"></div>
 </div>
 
@@ -1597,10 +1604,33 @@ function normalizeTR(text) {
     .trim();
 }
 
+function updateSearchClearButton() {
+  const input = document.getElementById("citySearchInput");
+  const clearBtn = document.getElementById("clearCitySearch");
+  if (!input || !clearBtn) return;
+  clearBtn.style.display = input.value ? "block" : "none";
+}
+
+function clearCitySearch(e) {
+  if (e) e.stopPropagation();
+  const input = document.getElementById("citySearchInput");
+  const dropdown = document.getElementById("searchDropdown");
+  if (!input) return;
+  input.value = "";
+  window._searchPlantResults = [];
+  if (dropdown) {
+    dropdown.innerHTML = "";
+    dropdown.style.display = "none";
+  }
+  updateSearchClearButton();
+  input.focus();
+}
+
 function filterSearch(e) {
   const query = e.target.value;
   const normQuery = normalizeTR(query);
   const dropdown = document.getElementById("searchDropdown");
+  updateSearchClearButton();
 
   if (!normQuery) {
     dropdown.style.display = "none";
