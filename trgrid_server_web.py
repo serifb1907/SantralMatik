@@ -424,11 +424,22 @@ def fetch_epias(username, password, date_str, job_id):
 
         aggregate = {}
         source_totals = {}
+        plant_names = {}
+        plant_ids = {}
 
         for row in all_rows:
             name = str(row.get("powerPlantName") or "").strip()
             if not name:
                 continue
+
+            raw_id = (
+                row.get("powerPlantId")
+                or row.get("powerplantId")
+                or row.get("plantId")
+                or row.get("id")
+            )
+            plant_id = str(raw_id).strip() if raw_id not in (None, "") else ""
+            key = "id:" + plant_id if plant_id else "name:" + name.casefold()
 
             hour = row.get("hour")
             try:
@@ -442,24 +453,29 @@ def fetch_epias(username, password, date_str, job_id):
             if not 0 <= hour_num <= 23:
                 continue
 
-            total_value = number(row.get("total"))
-            aggregate.setdefault(name, [0.0] * 24)[hour_num] += total_value
+            aggregate.setdefault(key, [0.0] * 24)[hour_num] += number(row.get("total"))
+            source_totals.setdefault(key, {k: 0.0 for k in SOURCE_KEYS})
+            for source_key in SOURCE_KEYS:
+                source_totals[key][source_key] += number(row.get(source_key))
 
-            totals = source_totals.setdefault(name, {key: 0.0 for key in SOURCE_KEYS})
-            for key in SOURCE_KEYS:
-                totals[key] += number(row.get(key))
+            plant_names[key] = name
+            if plant_id:
+                plant_ids[key] = plant_id
 
         plants_out = []
-        for name, hours in aggregate.items():
-            source_sum = source_totals.get(name, {key: 0.0 for key in SOURCE_KEYS})
-            clean_sources = {key: round(number(source_sum.get(key)), 6) for key in SOURCE_KEYS}
-            plants_out.append({
-                "name": name,
+        for key, hours in aggregate.items():
+            source_sum = source_totals.get(key, {k: 0.0 for k in SOURCE_KEYS})
+            clean_sources = {k: round(number(source_sum.get(k)), 6) for k in SOURCE_KEYS}
+            item = {
+                "name": plant_names.get(key, ""),
                 "dailyTotal": round(sum(hours), 6),
                 "hourly": [round(v, 6) for v in hours],
                 "type": classify_source(source_sum),
                 "sourceTotals": clean_sources,
-            })
+            }
+            if key in plant_ids:
+                item["id"] = plant_ids[key]
+            plants_out.append(item)
 
         set_progress(
             job_id,
@@ -469,6 +485,32 @@ def fetch_epias(username, password, date_str, job_id):
         )
 
         load = get_national_load(tgt, session)
+
+        # Arama kutusu yalnızca o gün üretim kaydı dönen santrallere bağlı kalmasın.
+        # EPİAŞ santral listesindeki TÜM tesisleri ayrı bir dizin olarak gönderiyoruz.
+        # Böylece 0 MWh üreten tesisler de aranabilir. Hassas bilgi içermez.
+        plant_directory = []
+        for plant in plants:
+            name = str(
+                plant.get("name")
+                or plant.get("powerPlantName")
+                or plant.get("powerplantName")
+                or ""
+            ).strip()
+            if not name:
+                continue
+
+            item = {"id": plant.get("id"), "name": name}
+            for key in (
+                "city", "cityName", "province", "provinceName", "il", "ilAdi",
+                "locationCity", "district", "districtName",
+                "latitude", "longitude", "lat", "lon", "lng",
+                "powerPlantType", "powerplantType", "type"
+            ):
+                value = plant.get(key)
+                if value not in (None, ""):
+                    item[key] = value
+            plant_directory.append(item)
 
         set_progress(
             job_id,
@@ -480,7 +522,9 @@ def fetch_epias(username, password, date_str, job_id):
         result = {
             "date": date_str,
             "plantCount": len(plants_out),
+            "directoryCount": len(plant_directory),
             "plants": plants_out,
+            "plantDirectory": plant_directory,
             "nationalLoad": load,
         }
 
