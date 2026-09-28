@@ -1541,14 +1541,40 @@ function filterSearch(e) {
     });
   });
 
-  // EPİAŞ'ın döndürdüğü TÜM üretim kayıtları: yalnızca o gün üretim yapanları değil,
-  // EPİAŞ listesindeki sıfır üretimli tesisleri de aramaya dahil ediyoruz.
-  const epiasPlants = typeof window.getRealtimeEpiasPlants === 'function'
-    ? (window.getRealtimeEpiasPlants() || [])
+  // EPİAŞ santral dizini: üretim 0 olsa bile TÜM tesisleri içerir.
+  // Günlük üretim kaydı varsa onu dizin kaydına ekleyerek gösteriyoruz.
+  const epiasDirectory = Array.isArray(window.epiasPlantDirectory)
+    ? window.epiasPlantDirectory
     : [];
-  const epiasPlantMatches = epiasPlants
-    .map((plant, epiasIdx) => ({ plant, epiasIdx, source:'epias' }))
+  const epiasPlants = Array.isArray(window.epiasPlantsData)
+    ? window.epiasPlantsData
+    : [];
+
+  const activeByName = new Map();
+  epiasPlants.forEach(plant => {
+    const key = normalizeTR(plant?.name || plant?.p || '');
+    if (key) activeByName.set(key, plant);
+  });
+
+  const epiasPlantMatches = epiasDirectory
+    .map((directoryPlant, epiasIdx) => {
+      const key = normalizeTR(directoryPlant?.name || directoryPlant?.p || '');
+      const active = activeByName.get(key);
+      return {
+        plant: active ? { ...directoryPlant, ...active } : { ...directoryPlant, dailyTotal: 0, hourly: Array(24).fill(0) },
+        epiasIdx,
+        source:'epias'
+      };
+    })
     .filter(item => normalizeTR(item.plant?.name || item.plant?.p || '').includes(normQuery));
+
+  // Eski/uyumsuz EPİAŞ isimleri için günlük üretim kayıtlarını da ayrıca tara.
+  epiasPlants.forEach((plant, epiasIdx) => {
+    const key = normalizeTR(plant?.name || plant?.p || '');
+    if (!key || !key.includes(normQuery)) return;
+    const already = epiasPlantMatches.some(x => normalizeTR(x.plant?.name || x.plant?.p || '') === key);
+    if (!already) epiasPlantMatches.push({ plant, epiasIdx, source:'epias' });
+  });
 
   // Aynı tesis iki kaynaktan geliyorsa tek kez göster.
   const seen = new Set();
@@ -1701,11 +1727,16 @@ function checkSearchEnter(e) {
     return;
   }
 
-  // Arama kutusu Enter'a basılmadan önce doldurulmuşsa tüm EPİAŞ listesini de tara.
-  const epiasPlants = Array.isArray(window.epiasPlantsData) ? window.epiasPlantsData : [];
-  const epiasIdx = epiasPlants.findIndex(p => normalizeTR(p?.name || p?.p || '').includes(normQuery));
+  // Enter ile aramada da tüm EPİAŞ santral dizinini tara.
+  const epiasDirectory = Array.isArray(window.epiasPlantDirectory) ? window.epiasPlantDirectory : [];
+  const epiasIdx = epiasDirectory.findIndex(p => normalizeTR(p?.name || p?.p || '').includes(normQuery));
   if (epiasIdx !== -1) {
-    window._searchPlantResults = epiasPlants.map((plant, idx) => ({ source:'epias', epiasIdx:idx, plant }));
+    const activePlants = Array.isArray(window.epiasPlantsData) ? window.epiasPlantsData : [];
+    const activeByName = new Map(activePlants.map(p => [normalizeTR(p?.name || p?.p || ''), p]));
+    window._searchPlantResults = epiasDirectory.map((directoryPlant, idx) => {
+      const active = activeByName.get(normalizeTR(directoryPlant?.name || directoryPlant?.p || ''));
+      return { source:'epias', epiasIdx:idx, plant: active ? { ...directoryPlant, ...active } : { ...directoryPlant, dailyTotal:0, hourly:Array(24).fill(0) } };
+    });
     selectSearchPlantResult(epiasIdx);
     return;
   }
@@ -2253,6 +2284,9 @@ setInterval(() => {
 
 
   let epiasPlantsData = [];
+  let epiasPlantDirectory = [];
+  window.epiasPlantsData = epiasPlantsData;
+  window.epiasPlantDirectory = epiasPlantDirectory;
 
   function totalsForRenewablePlant(src) {
     return num(src.wind) + num(src.sun) + num(src.dammedHydro) + num(src.river) +
@@ -2264,7 +2298,10 @@ setInterval(() => {
     if (!plants.length) throw new Error('EPİAŞ yanıtında üretim kaydı bulunamadı.');
     epiasPlantsData = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
     window.epiasPlantsData = epiasPlantsData;
-    epiasPlantsData = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
+    epiasPlantDirectory = Array.isArray(payload?.plantDirectory)
+      ? payload.plantDirectory.map(x => ({ ...x }))
+      : [];
+    window.epiasPlantDirectory = epiasPlantDirectory;
 
     const byName = new Map();
     plants.forEach(x => {
