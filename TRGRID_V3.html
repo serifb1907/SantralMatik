@@ -2254,6 +2254,11 @@ setInterval(() => {
 
   let epiasPlantsData = [];
 
+  function totalsForRenewablePlant(src) {
+    return num(src.wind) + num(src.sun) + num(src.dammedHydro) + num(src.river) +
+           num(src.geothermal) + num(src.biomass);
+  }
+
   function applyData(payload) {
     const plants = Array.isArray(payload?.plants) ? payload.plants : [];
     if (!plants.length) throw new Error('EPİAŞ yanıtında üretim kaydı bulunamadı.');
@@ -2290,14 +2295,25 @@ setInterval(() => {
 
     // Kenardaki toplamlar haritadaki birkaç bin tesisin toplamı değil, EPİAŞ'ın döndürdüğü
     // bütün üretim kayıtlarının toplamıdır.
+    // Kaynak toplamlarını santralin tekil "type" etiketinden değil,
+    // EPİAŞ'tan gelen kaynak bazlı günlük toplamlarından hesapla.
+    // Böylece bir santral "unknown" sınıfına düşse bile Güneş/Rüzgar vb.
+    // toplamları kaybolmaz.
     const totals = {ALL:0,wind:0,sun:0,hydro:0,thermal:0,geothermal:0,biomass:0};
     let renewable = 0;
     plants.forEach(x => {
       const v = num(x.dailyTotal);
-      const g = groupOf(x.type);
+      const src = x.sourceTotals && typeof x.sourceTotals === 'object' ? x.sourceTotals : {};
       totals.ALL += v;
-      totals[g] += v;
-      if (['wind','sun','dammedHydro','river','geothermal','biomass'].includes(x.type)) renewable += v;
+      totals.wind += num(src.wind);
+      totals.sun += num(src.sun);
+      totals.hydro += num(src.dammedHydro) + num(src.river);
+      totals.thermal += num(src.naturalGas) + num(src.lignite) + num(src.importCoal) +
+                        num(src.fueloil) + num(src.asphaltiteCoal) + num(src.blackCoal) +
+                        num(src.naphta) + num(src.lng) + num(src.wasteheat);
+      totals.geothermal += num(src.geothermal);
+      totals.biomass += num(src.biomass);
+      renewable += totalsForRenewablePlant(src);
     });
 
     const fmt = n => (n >= 1000 ? (n/1000).toFixed(1)+'k' : n.toFixed(0)) + ' MWh';
