@@ -20,6 +20,7 @@ import re
 import secrets
 import threading
 import time
+import unicodedata
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime
@@ -358,6 +359,27 @@ def get_national_load(tgt, session):
         return {"value": None}
 
 
+
+_TR_TABLE = str.maketrans("İıŞşĞğÜüÖöÇç", "IiSsGgUuOoCc")
+
+
+def norm_name(value):
+    """Türkçe karakter, büyük/küçük harf, boşluk ve sembollerden bağımsız karşılaştırma anahtarı."""
+    text = unicodedata.normalize("NFKC", str(value or "")).translate(_TR_TABLE).upper()
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return re.sub(r"[^A-Z0-9]+", "", text)
+
+
+def directory_display_name(plant):
+    """EPİAŞ santral kaydından gösterilecek adı bulur; ad yoksa kaydı düşürmez."""
+    for key in ("name", "powerPlantName", "powerplantName", "shortName", "eic"):
+        value = str(plant.get(key) or "").strip()
+        if value:
+            return value
+    return "Santral #" + str(plant.get("id"))
+
+
 def fetch_epias(username, password, date_str, job_id):
     validate_date(date_str)
     validate_credentials(username, password)
@@ -427,11 +449,18 @@ def fetch_epias(username, password, date_str, job_id):
         plant_names = {}
         plant_ids = {}
 
-        for row in all_rows:
-            name = str(row.get("powerPlantName") or "").strip()
-            if not name:
-                continue
+        # Üretim satırlarında ad veya ID eksik olabilir. Tam santral listesini (plants)
+        # referans alarak eksik alanı tamamlıyoruz; böylece satır düşmez ve aynı santral
+        # "id:" / "name:" diye ikiye bölünmez.
+        dir_name_by_id = {}
+        dir_ids_by_norm = defaultdict(set)
+        for plant in plants:
+            pid = str(plant.get("id")).strip()
+            dname = directory_display_name(plant)
+            dir_name_by_id[pid] = dname
+            dir_ids_by_norm[norm_name(dname)].add(pid)
 
+        for row in all_rows:
             raw_id = (
                 row.get("powerPlantId")
                 or row.get("powerplantId")
@@ -439,7 +468,20 @@ def fetch_epias(username, password, date_str, job_id):
                 or row.get("id")
             )
             plant_id = str(raw_id).strip() if raw_id not in (None, "") else ""
-            key = "id:" + plant_id if plant_id else "name:" + name.casefold()
+            name = str(row.get("powerPlantName") or "").strip()
+
+            if not name and plant_id:
+                name = dir_name_by_id.get(plant_id, "")
+            if not name:
+                continue
+
+            # ID yoksa, yalnızca adı dizinde TEK bir santrale karşılık geliyorsa ID'yi tamamla.
+            if not plant_id:
+                candidates = dir_ids_by_norm.get(norm_name(name), set())
+                if len(candidates) == 1:
+                    plant_id = next(iter(candidates))
+
+            key = "id:" + plant_id if plant_id else "name:" + norm_name(name)
 
             hour = row.get("hour")
             try:
@@ -491,25 +533,15 @@ def fetch_epias(username, password, date_str, job_id):
         # Böylece 0 MWh üreten tesisler de aranabilir. Hassas bilgi içermez.
         plant_directory = []
         for plant in plants:
-            name = str(
-                plant.get("name")
-                or plant.get("powerPlantName")
-                or plant.get("powerplantName")
-                or ""
-            ).strip()
-            if not name:
-                continue
-
-            item = {"id": plant.get("id"), "name": name}
-            for key in (
-                "city", "cityName", "province", "provinceName", "il", "ilAdi",
-                "locationCity", "district", "districtName",
-                "latitude", "longitude", "lat", "lon", "lng",
-                "powerPlantType", "powerplantType", "type"
-            ):
-                value = plant.get(key)
-                if value not in (None, ""):
-                    item[key] = value
+            # EPİAŞ'ın döndürdüğü tüm sade (skaler) alanları aktar: il, ilçe, tip, koordinat,
+            # kurulu güç, EIC, kısa ad vb. hangi isimle gelirse gelsin kaybolmasın.
+            item = {
+                k: v for k, v in plant.items()
+                if isinstance(v, (str, int, float, bool)) and v != ""
+            }
+            item["id"] = plant.get("id")
+            item["name"] = directory_display_name(plant)
+            item["hasGeneration"] = ("id:" + str(plant.get("id")).strip()) in aggregate
             plant_directory.append(item)
 
         set_progress(

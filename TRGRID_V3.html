@@ -1100,7 +1100,15 @@ const typeCfg = {
     importCoal: { i: "🏭", l: "İthal Kömür", color: "#8338ec", group: "thermal", renewable: false },
     geothermal: { i: "🌋", l: "Jeotermal", color: "#ff823a", group: "geothermal", renewable: true },
     biomass: { i: "🌱", l: "Biyokütle", color: "#aacc00", group: "biomass", renewable: true },
-    coal: { i: "🏭", l: "Taş Kömürü", color: "#8338ec", group: "thermal", renewable: false }
+    coal: { i: "🏭", l: "Taş Kömürü", color: "#8338ec", group: "thermal", renewable: false },
+    blackCoal: { i: "🏭", l: "Taş Kömürü", color: "#8338ec", group: "thermal", renewable: false },
+    asphaltiteCoal: { i: "🏭", l: "Asfaltit Kömür", color: "#8338ec", group: "thermal", renewable: false },
+    fueloil: { i: "🛢️", l: "Fuel Oil", color: "#f72585", group: "thermal", renewable: false },
+    naphta: { i: "🛢️", l: "Nafta", color: "#f72585", group: "thermal", renewable: false },
+    lng: { i: "🔥", l: "LNG", color: "#f72585", group: "thermal", renewable: false },
+    wasteheat: { i: "♨️", l: "Atık Isı", color: "#f72585", group: "thermal", renewable: false },
+    hydro: { i: "🌊", l: "Hidroelektrik", color: "#00d2ff", group: "hydro", renewable: true },
+    unknown: { i: "⚡", l: "Bilinmiyor", color: "#94a3b8", group: null, renewable: false }
 };
 
 // EPİAŞ / TEİAŞ OPERASYONEL İSTİHBARAT BİLGİLERİ
@@ -1479,17 +1487,22 @@ function closeResourceInfo() {
 }
 
 // TÜRKÇE KARAKTER DUYARLI NORMALİZASYON
+// Küçük harf + aksan temizliği + (harf/rakam dışı her şey) -> tek boşluk.
+// "GES-1", "ges 1", "Ges_1" -> "ges 1"; "İĞNEADA", "ıgneada", "I\u0307gneada" -> "igneada"
 function normalizeTR(text) {
-  if (!text) return "";
-  return text
+  if (text == null) return "";
+  return String(text)
     .toLocaleLowerCase('tr-TR')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/ı/g, 'i')
-    .replace(/ğ/g, 'g')
-    .replace(/ü/g, 'u')
-    .replace(/ş/g, 's')
-    .replace(/ö/g, 'o')
-    .replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+// Boşluksuz anahtar: "GES 1" ile "GES1" aynı sonucu verir.
+function compactKey(text) { return normalizeTR(text).replace(/ /g, ''); }
+
+function escapeHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 function updateSearchClearButton() {
@@ -1538,105 +1551,210 @@ function getPlantCoords(plant, fallbackCity = null) {
   return fallbackCity?.c || [39.0, 35.0];
 }
 
-function getEpiasDailyForDirectoryItem(dirPlant) {
-  const daily = Array.isArray(window.epiasPlantsData) ? window.epiasPlantsData : [];
-  const wantedId = getPlantId(dirPlant);
-  if (wantedId) {
-    const byId = daily.find(x => getPlantId(x) === wantedId);
-    if (byId) return byId;
-  }
-  const wantedName = normalizeTR(getPlantName(dirPlant));
-  if (!wantedName) return null;
-  return daily.find(x => normalizeTR(getPlantName(x)) === wantedName) ||
-         daily.find(x => {
-           const n = normalizeTR(getPlantName(x));
-           return wantedName.length >= 7 && n.length >= 7 && (n.startsWith(wantedName) || wantedName.startsWith(n));
-         }) || null;
+// EPİAŞ tesis tipini (farklı yazımlarla gelebilir) typeCfg anahtarına çevirir.
+function mapTypeLabel(raw) {
+  if (!raw) return '';
+  const r = String(raw);
+  if (typeCfg[r]) return r;
+  const t = normalizeTR(r);
+  if (/ruzgar|wind/.test(t)) return 'wind';
+  if (/gunes|solar|\bsun\b|\bpv\b/.test(t)) return 'sun';
+  if (/baraj|dam/.test(t)) return 'dammedHydro';
+  if (/akarsu|river|run of/.test(t)) return 'river';
+  if (/hidro|hydro/.test(t)) return 'hydro';
+  if (/jeotermal|geothermal/.test(t)) return 'geothermal';
+  if (/biyo|biomass|biogas/.test(t)) return 'biomass';
+  if (/dogal ?gaz|natural ?gas/.test(t)) return 'naturalGas';
+  if (/linyit|lignite/.test(t)) return 'lignite';
+  if (/ithal|import/.test(t)) return 'importCoal';
+  if (/tas ?komur|black ?coal/.test(t)) return 'blackCoal';
+  return '';
 }
 
+// Son çare: EPİAŞ dizininde tip yoksa ve o gün üretim de yoksa ad sonekinden TAHMİN.
+function guessTypeFromName(name) {
+  const tokens = normalizeTR(name).split(' ');
+  let last = tokens[tokens.length - 1] || '';
+  // "GES-1" / "GES 2" gibi sayı soneklerini atla: ... GES 1 -> ges
+  if (/^\d+$/.test(last) && tokens.length > 1) last = tokens[tokens.length - 2];
+  if (/^res\d*$/.test(last)) return 'wind';
+  if (/^ges\d*$/.test(last)) return 'sun';
+  if (/^hes\d*$/.test(last)) return 'hydro';
+  if (/^jes\d*$/.test(last)) return 'geothermal';
+  if (/^(bes|biyogaz|biyokutle)\d*$/.test(last)) return 'biomass';
+  return '';
+}
+
+function toHourly24(a) {
+  const out = Array.isArray(a) ? a.slice(0, 24).map(cleanVal) : [];
+  while (out.length < 24) out.push(0);
+  return out;
+}
+
+// EPİAŞ dizini (plantDirectory) + üretim kayıtlarını (plants) TEK listede birleştirir.
+// Eşleştirme sırası: 1) ID  2) boşluk/sembol/Türkçe-duyarsız ad (yalnızca henüz eşleşmemiş kayıtlar).
+// Dizinde olup üretimi olmayan santral 0 MWh ile kalır; dizinde olmayan üretim kaydı da düşmez.
+function buildEpiasRecords(generation, directory) {
+  const records = [];
+  const byId = new Map();
+  const byKey = new Map();
+  const addKey = (rec) => {
+    const k = compactKey(rec.name);
+    if (!k) return;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(rec);
+  };
+
+  (directory || []).forEach(d => {
+    const id = getPlantId(d);
+    const name = getPlantName(d) || (id ? `Santral #${id}` : '');
+    if (!name) return;
+    if (id && byId.has(id)) return;           // aynı ID iki kez gelirse tek kayıt
+    const rec = { id, name, meta: d, gen: null };
+    records.push(rec);
+    if (id) byId.set(id, rec);
+    addKey(rec);
+  });
+
+  (generation || []).forEach(g => {
+    const id = getPlantId(g);
+    const name = getPlantName(g);
+    if (!id && !name) return;
+    let rec = id ? byId.get(id) : null;
+    if (!rec && name) {
+      rec = (byKey.get(compactKey(name)) || [])
+        .find(c => !c.gen && (!id || !c.id || c.id === id)) || null;
+    }
+    if (rec) {
+      rec.gen = g;
+      if (!rec.id && id) { rec.id = id; byId.set(id, rec); }
+    } else {
+      rec = { id, name: name || `Santral #${id}`, meta: {}, gen: g };
+      records.push(rec);
+      if (id) byId.set(id, rec);
+      addKey(rec);
+    }
+  });
+
+  records.forEach(rec => {
+    const g = rec.gen, m = rec.meta || {};
+    rec.dailyTotal = cleanVal(g?.dailyTotal);
+    rec.hourly = toHourly24(g?.hourly);
+    rec.sourceTotals = g?.sourceTotals || {};
+    let type = g?.type && g.type !== 'unknown' ? g.type : '';
+    if (!type) type = mapTypeLabel(m.powerPlantType || m.powerplantType || m.type || m.plantType || m.fuelType);
+    rec.typeGuessed = false;
+    if (!type) { type = guessTypeFromName(rec.name); rec.typeGuessed = !!type; }
+    rec.type = type || 'unknown';
+  });
+
+  return { records, byId, byKey };
+}
+
+// Geriye dönük uyumluluk: eski çağrılar aynı sonucu alır.
+function getEpiasDailyForDirectoryItem(dirPlant) {
+  const set = window.epiasRecordSet;
+  if (!set) return null;
+  const id = getPlantId(dirPlant);
+  const rec = (id && set.byId.get(id)) || (set.byKey.get(compactKey(getPlantName(dirPlant))) || [])[0];
+  return rec?.gen || null;
+}
+
+function makeSearchEntry(base, extra) {
+  const hay = [extra.name, extra.cityName, base.district, base.districtName,
+               base.shortName, base.eic, typeCfg[extra.type]?.l].filter(Boolean).join(' ');
+  return {
+    ...extra,
+    _id: extra.id ? String(extra.id) : '',
+    _nameS: normalizeTR(extra.name),
+    _nameC: compactKey(extra.name),
+    _hayS: normalizeTR(hay),
+    _hayC: compactKey(hay)
+  };
+}
+
+// İndeks her tuş vuruşunda değil, veri/tarih değiştiğinde BİR kez kurulur (bkz. getSearchIndex).
 function buildSearchPlantIndex() {
   const results = [];
-  const seen = new Set();
+  const set = window.epiasRecordSet || { records: [] };
 
-  // 1) Önce uygulamanın kendi harita kayıtları. Haritada ne görünüyorsa aramada da o kayıt açılır.
+  // 1) Haritadaki sabit santraller
+  const claimed = new Set();
   allCities.forEach((city, cityIdx) => {
     (city.plants || []).forEach((plant, plantIdx) => {
       const name = getPlantName(plant);
-      const key = `system|${cityIdx}|${plantIdx}|${normalizeTR(name)}`;
-      if (!name || seen.has(key)) return;
-      seen.add(key);
-      results.push({
-        source: 'system',
-        cityIdx,
-        plantIdx,
-        city,
-        plant,
-        name,
-        cityName: city.n,
-        value: cleanVal(plant.v),
-        type: plant.k || 'unknown'
-      });
+      if (!name) return;
+      if (plant.epiasClaim) claimed.add(plant.epiasClaim);
+      results.push(makeSearchEntry({}, {
+        source: 'system', cityIdx, plantIdx, city, plant, name,
+        cityName: city.n, value: cleanVal(plant.v), type: plant.k || 'unknown',
+        id: plant.epiasId || ''
+      }));
     });
   });
 
-  // 2) EPİAŞ'ın tam santral dizini. Haritada henüz sabit kaydı olmayan santraller de
-  // burada görünür. Aynı tesis sistemde zaten varsa ikinci kez göstermiyoruz.
-  const directory = Array.isArray(window.epiasPlantDirectory) ? window.epiasPlantDirectory : [];
-  const systemNames = results.map(r => normalizeTR(r.name)).filter(Boolean);
-  const isSameSystemPlant = (name) => {
-    const n = normalizeTR(name);
-    if (!n) return false;
-    if (systemNames.includes(n)) return true;
-    return systemNames.some(x => x.length >= 7 && n.length >= 7 && (x.startsWith(n) || n.startsWith(x)));
-  };
-
-  directory.forEach((dirPlant) => {
-    const name = getPlantName(dirPlant);
-    if (!name || isSameSystemPlant(name)) return;
-
-    const daily = getEpiasDailyForDirectoryItem(dirPlant);
-    const cityName = getPlantCityName(dirPlant) || 'EPİAŞ';
-    const cityMatchIdx = allCities.findIndex(c => normalizeTR(c.n) === normalizeTR(cityName));
+  // 2) EPİAŞ'ın TÜM kayıtları. Yalnızca bir harita santraliyle birebir (ID/ad) eşleşenler
+  // tekrar eklenmez; önek benzerliği artık kayıt gizlemez.
+  set.records.forEach(rec => {
+    if (claimed.has(rec)) return;
+    const meta = rec.meta || {};
+    const cityName = getPlantCityName(meta) || 'EPİAŞ';
+    const cityMatchIdx = allCities.findIndex(c => compactKey(c.n) === compactKey(cityName));
     const fallbackCity = cityMatchIdx >= 0 ? allCities[cityMatchIdx] : null;
-    const syntheticCity = {
-      n: cityName,
-      c: getPlantCoords(dirPlant, fallbackCity),
-      plants: []
-    };
     const plant = {
-      p: name,
-      v: cleanVal(daily?.dailyTotal),
-      hourly: ensure24(daily?.hourly),
-      k: daily?.type && daily.type !== 'unknown' ? daily.type : (dirPlant.powerPlantType || dirPlant.powerplantType || dirPlant.type || 'unknown'),
-      epiasName: name,
-      epiasId: getPlantId(dirPlant) || getPlantId(daily),
-      sourceTotals: daily?.sourceTotals || {}
+      p: rec.name,
+      v: rec.dailyTotal,
+      hourly: rec.hourly,
+      k: rec.type,
+      typeGuessed: rec.typeGuessed,
+      epiasName: rec.name,
+      epiasId: rec.id,
+      sourceTotals: rec.sourceTotals
     };
-
-    results.push({
+    results.push(makeSearchEntry(meta, {
       source: 'epias',
       cityIdx: cityMatchIdx,
-      city: fallbackCity || syntheticCity,
-      plant,
-      directoryPlant: dirPlant,
-      daily,
-      name,
-      cityName,
-      value: cleanVal(plant.v),
-      type: plant.k
-    });
+      city: fallbackCity || { n: cityName, c: getPlantCoords(meta, null), plants: [] },
+      plant, directoryPlant: meta, daily: rec.gen,
+      name: rec.name, cityName, value: rec.dailyTotal, type: rec.type,
+      id: rec.id, typeGuessed: rec.typeGuessed
+    }));
   });
 
   return results;
 }
 
+function getSearchIndex() {
+  if (!window._searchIndexCache) window._searchIndexCache = buildSearchPlantIndex();
+  return window._searchIndexCache;
+}
+
+// Puan: tam ad > ID > ad başlangıcı > ad içinde > tüm kelimeler (ad/il/ilçe/tip) > boşluksuz eşleşme
+function scorePlantMatch(e, q) {
+  if (e._nameC === q.compact) return 100;
+  if (q.raw && e._id && e._id === q.raw) return 95;
+  if (e._nameS.startsWith(q.spaced)) return 80;
+  if (e._nameC.includes(q.compact)) return 70;
+  if (q.tokens.length && q.tokens.every(t => e._nameS.includes(t))) return 60;
+  if (q.tokens.length && q.tokens.every(t => e._hayS.includes(t))) return 40;
+  if (e._hayC.includes(q.compact)) return 30;
+  return 0;
+}
+
+const SEARCH_RENDER_LIMIT = 150;
+
 function filterSearch(e) {
   const query = e.target.value || '';
-  const normQuery = normalizeTR(query);
+  const q = {
+    raw: query.trim(),
+    spaced: normalizeTR(query),
+    compact: compactKey(query),
+    tokens: normalizeTR(query).split(' ').filter(Boolean)
+  };
   const dropdown = document.getElementById('searchDropdown');
   updateSearchClearButton();
 
-  if (!normQuery) {
+  if (!q.compact) {
     window._searchPlantResults = [];
     dropdown.innerHTML = '';
     dropdown.style.display = 'none';
@@ -1645,13 +1763,15 @@ function filterSearch(e) {
 
   const cityMatches = allCities
     .map((city, idx) => ({ city, idx }))
-    .filter(item => normalizeTR(item.city.n).includes(normQuery));
+    .filter(item => normalizeTR(item.city.n).includes(q.spaced) || compactKey(item.city.n).includes(q.compact));
 
-  const allPlants = buildSearchPlantIndex();
-  const plantMatches = allPlants.filter(r =>
-    normalizeTR(r.name).includes(normQuery) || normalizeTR(r.cityName).includes(normQuery)
-  );
+  const plantMatches = getSearchIndex()
+    .map(r => ({ r, s: scorePlantMatch(r, q) }))
+    .filter(x => x.s > 0)
+    .sort((a, b) => b.s - a.s || b.r.value - a.r.value || a.r.name.localeCompare(b.r.name, 'tr'))
+    .map(x => x.r);
 
+  // Dizin numarası = görüntülenen sıra; Enter ve tıklama aynı diziyi kullanır.
   window._searchPlantResults = plantMatches;
   window._lastSearchQuery = query;
 
@@ -1663,25 +1783,30 @@ function filterSearch(e) {
 
   const cityHtml = cityMatches.map(m => `
     <div onclick="selectCityFromSearch(${m.idx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:11px;cursor:pointer;border-bottom:1px solid rgba(0,210,255,0.12);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(0,210,255,.15)'" onmouseout="this.style.background='transparent'">
-      <span>📍 ${m.city.n}</span>
+      <span>📍 ${escapeHtml(m.city.n)}</span>
       <small style="color:var(--neon-yellow);font-weight:bold;white-space:nowrap;">${cleanVal(m.city.totalMWh).toFixed(0)} MWh</small>
     </div>
   `).join('');
 
-  const plantHtml = plantMatches.map((m, resultIdx) => {
+  const shown = plantMatches.slice(0, SEARCH_RENDER_LIMIT);
+  const plantHtml = shown.map((m, resultIdx) => {
     const value = cleanVal(m.value);
-    const type = typeCfg[m.type]?.l || m.type || 'Bilinmiyor';
+    const type = (typeCfg[m.type]?.l || m.type || 'Bilinmiyor') + (m.typeGuessed ? ' (tahmini)' : '');
     const sourceTag = m.source === 'epias' ? 'EPİAŞ' : 'HARİTA';
     return `
       <div onclick="selectSearchPlantResult(${resultIdx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:10px;cursor:pointer;border-bottom:1px solid rgba(16,185,129,.14);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(16,185,129,.12)'" onmouseout="this.style.background='transparent'">
-        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${m.name} <small style="color:#64748b;">[${m.cityName}] • ${type} • ${sourceTag}</small></span>
+        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${escapeHtml(m.name)} <small style="color:#64748b;">[${escapeHtml(m.cityName)}] • ${escapeHtml(type)} • ${sourceTag}</small></span>
         <small style="color:var(--neon-green);font-weight:bold;white-space:nowrap;">${value.toFixed(0)} MWh</small>
       </div>`;
   }).join('');
 
+  const moreHtml = plantMatches.length > shown.length
+    ? `<div style="padding:6px 12px;color:#94a3b8;font:9px 'JetBrains Mono';">+${plantMatches.length - shown.length} santral daha var. Aramayı daraltın.</div>`
+    : '';
+
   dropdown.innerHTML = `
     ${cityHtml ? `<div style="padding:5px 10px;background:rgba(0,210,255,.06);color:#38bdf8;font:700 8px 'JetBrains Mono';letter-spacing:1px;">İLLER (${cityMatches.length})</div>${cityHtml}` : ''}
-    ${plantHtml ? `<div style="padding:5px 10px;background:rgba(16,185,129,.06);color:#34d399;font:700 8px 'JetBrains Mono';letter-spacing:1px;">SANTRALLER (${plantMatches.length})</div>${plantHtml}` : ''}
+    ${plantHtml ? `<div style="padding:5px 10px;background:rgba(16,185,129,.06);color:#34d399;font:700 8px 'JetBrains Mono';letter-spacing:1px;">SANTRALLER (${plantMatches.length})</div>${plantHtml}${moreHtml}` : ''}
   `;
   dropdown.style.display = 'block';
 }
@@ -1751,25 +1876,18 @@ function selectPlantFromSearch(cityIdx, plantIdx) {
 function checkSearchEnter(e) {
   if (e.key !== 'Enter') return;
   const normQuery = normalizeTR(e.target.value);
-  if (!normQuery) return;
+  const compact = compactKey(e.target.value);
+  if (!compact) return;
 
+  // _searchPlantResults zaten alaka sırasına göre dizili: 0. sonuç en iyi eşleşmedir.
   const results = window._searchPlantResults || [];
-  const exact = results.findIndex(r => normalizeTR(r.name) === normQuery);
-  const partial = results.findIndex(r => normalizeTR(r.name).includes(normQuery));
-  const cityIdx = allCities.findIndex(c => normalizeTR(c.n) === normQuery);
+  const exact = results.findIndex(r => r._nameC === compact);
+  const partial = results.length ? 0 : -1;
+  const cityIdx = allCities.findIndex(c => compactKey(c.n) === compact);
   const partialCityIdx = allCities.findIndex(c => normalizeTR(c.n).includes(normQuery));
-  if (exact !== -1) {
-    selectSearchPlantResult(exact);
-    return;
-  }
-  if (cityIdx !== -1) {
-    selectCityFromSearch(cityIdx);
-    return;
-  }
-  if (partial !== -1) {
-    selectSearchPlantResult(partial);
-    return;
-  }
+  if (exact !== -1) { selectSearchPlantResult(exact); return; }
+  if (cityIdx !== -1) { selectCityFromSearch(cityIdx); return; }
+  if (partial !== -1) { selectSearchPlantResult(partial); return; }
   if (partialCityIdx !== -1) selectCityFromSearch(partialCityIdx);
 }
 
@@ -2354,40 +2472,63 @@ setInterval(() => {
 
   function applyData(payload) {
     const plants = Array.isArray(payload?.plants) ? payload.plants : [];
-    if (!plants.length) throw new Error('EPİAŞ yanıtında üretim kaydı bulunamadı.');
+    const directory = Array.isArray(payload?.plantDirectory) ? payload.plantDirectory : [];
+    if (!plants.length && !directory.length) throw new Error('EPİAŞ yanıtında santral kaydı bulunamadı.');
+
     epiasPlantsData = plants.map(x => ({ ...x, hourly: ensure24(x.hourly) }));
     window.epiasPlantsData = epiasPlantsData;
-    epiasPlantDirectory = Array.isArray(payload?.plantDirectory)
-      ? payload.plantDirectory.map(x => ({ ...x }))
-      : [];
+    epiasPlantDirectory = directory.map(x => ({ ...x }));
     window.epiasPlantDirectory = epiasPlantDirectory;
 
-    const byName = new Map();
-    plants.forEach(x => {
-      const k = norm(x.name);
-      if (k) byName.set(k, x);
-    });
+    // Dizin + üretim tek kayıt setinde birleşir (ID öncelikli, sonra sembol/Türkçe-duyarsız ad).
+    const recordSet = buildEpiasRecords(epiasPlantsData, epiasPlantDirectory);
+    window.epiasRecordSet = recordSet;
+    window._searchIndexCache = null;   // arama indeksi bir sonraki aramada yeniden kurulur
 
     let matched = 0;
     let unmatched = 0;
-    allCities.forEach(city => {
-      city.plants.forEach(p => {
-        const x = findEpiasPlant(byName, p.p);
-        if (x) {
-          p.v = num(x.dailyTotal);
-          p.hourly = ensure24(x.hourly);
-          p.epiasName = x.name || p.p;
-          if (x.type && x.type !== 'unknown') p.k = x.type;
-          matched++;
-        } else {
-          // Haritada bulunmayan eski/hardcoded tesisleri sıfırlıyoruz, böylece ekranda sahte veri kalmıyor.
-          p.v = 0;
-          p.hourly = Array(24).fill(0);
-          unmatched++;
-        }
-      });
-      city.totalMWh = city.plants.reduce((s,p) => s + num(p.v), 0);
+    const claimed = new Set();
+    const systemPlants = [];
+    allCities.forEach(city => city.plants.forEach(p => { p.epiasClaim = null; p.epiasId = ''; systemPlants.push(p); }));
+
+    const applyRecord = (p, rec) => {
+      p.v = num(rec.dailyTotal);
+      p.hourly = ensure24(rec.hourly);
+      p.epiasName = rec.name || p.p;
+      p.epiasId = rec.id || '';
+      if (rec.type && rec.type !== 'unknown') p.k = rec.type;
+      matched++;
+    };
+
+    // Geçiş 1: birebir ad eşleşmesi (boşluk/sembol/Türkçe duyarsız). Eşleşen kayıt "sahiplenilir"
+    // ve aramada ikinci kez listelenmez. Üretimi 0 olan dizin kayıtları da burada eşleşir.
+    const leftovers = [];
+    systemPlants.forEach(p => {
+      const cands = recordSet.byKey.get(compactKey(p.p)) || [];
+      const rec = cands.find(r => !claimed.has(r) && r.gen) || cands.find(r => !claimed.has(r));
+      if (rec) { claimed.add(rec); p.epiasClaim = rec; applyRecord(p, rec); }
+      else leftovers.push(p);
     });
+
+    // Geçiş 2: eski bulanık eşleşme. Değerleri doldurur ama kaydı SAHİPLENMEZ; böylece
+    // "X RES" haritada "X RES 2" verisini alsa bile gerçek "X RES 2" aramada yine görünür.
+    const fuzzyMap = new Map();
+    recordSet.records.forEach(r => {
+      if (claimed.has(r) || !r.gen) return;
+      const k = norm(r.name);
+      if (k && !fuzzyMap.has(k)) fuzzyMap.set(k, r);
+    });
+    leftovers.forEach(p => {
+      const rec = findEpiasPlant(fuzzyMap, p.p);
+      if (rec) applyRecord(p, rec);
+      else {
+        // Haritada bulunmayan eski/hardcoded tesisleri sıfırlıyoruz, böylece ekranda sahte veri kalmıyor.
+        p.v = 0;
+        p.hourly = Array(24).fill(0);
+        unmatched++;
+      }
+    });
+    allCities.forEach(city => { city.totalMWh = city.plants.reduce((s,p) => s + num(p.v), 0); });
 
     // Kenardaki toplamlar haritadaki birkaç bin tesisin toplamı değil, EPİAŞ'ın döndürdüğü
     // bütün üretim kayıtlarının toplamıdır.
@@ -2432,9 +2573,9 @@ setInterval(() => {
     renderMapMarkers();
 
     const badge = document.getElementById('epiasStatusText');
-    badge.textContent = `BAĞLI • ${payload.date} • ${plants.length} kayıt • ${matched} eşleşme`;
+    badge.textContent = `BAĞLI • ${payload.date} • ${plants.length} üretim kaydı • ${recordSet.records.length} santral (aranabilir) • ${matched} eşleşme`;
 
-    return { count: plants.length, matched, unmatched, totals };
+    return { count: plants.length, matched, unmatched, totals, searchable: recordSet.records.length };
   }
 
   async function fetchForDate(targetDate, keepOverlay = false) {
