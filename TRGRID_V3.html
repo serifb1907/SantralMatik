@@ -898,6 +898,12 @@
 
 
 
+
+/* EPİAŞ tarih/durum kartı yalnızca ana harita ekranında görünür. */
+#epiasStatus { display:none !important; }
+#epiasStatus.map-view-visible { display:block !important; position:fixed !important; top:86px !important; right:18px !important; left:auto !important; bottom:auto !important; z-index:1000000 !important; }
+@media (max-width:768px) { #epiasStatus.map-view-visible { top:86px !important; right:8px !important; max-width:calc(100vw - 16px) !important; } }
+
 </style>
 </head>
 <body>
@@ -1522,86 +1528,6 @@ function clearCitySearch(e) {
   input.focus();
 }
 
-function buildDirectorySearchMatches(normQuery) {
-  const directory = Array.isArray(window.epiasPlantDirectory) ? window.epiasPlantDirectory : [];
-  const results = [];
-  const seen = new Set();
-  const cityKeys = ['city','cityName','province','provinceName','il','ilAdi','locationCity'];
-  directory.forEach((entry) => {
-    const name = String(entry?.name || entry?.powerPlantName || '').trim();
-    if (!name) return;
-    const cityName = String(cityKeys.map(k => entry?.[k]).find(v => v != null && String(v).trim()) || '').trim();
-    const normName = normalizeTR(name);
-    const normCity = normalizeTR(cityName);
-    if (!(normName.includes(normQuery) || normCity.includes(normQuery))) return;
-    const key = `${normCity}::${normName}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    // Sistem listesindeki aynı il + santral kaydı varsa ayrıca EPİAŞ sonucu göstermeyelim.
-    const alreadyInSystem = allCities.some(c => (!normCity || normalizeTR(c.n) === normCity) && (c.plants || []).some(p => normalizeTR(p.p) === normName));
-    if (!alreadyInSystem) results.push({ source: 'directory', entry, name, cityName });
-  });
-  return results;
-}
-
-function classifyDirectoryPlant(entry) {
-  const raw = normalizeTR(String(entry?.powerPlantType || entry?.powerplantType || entry?.type || ''));
-  if (/ruzgar|wind/.test(raw)) return 'wind';
-  if (/gunes|solar|sun|fotovoltaik/.test(raw)) return 'sun';
-  if (/hidro|baraj|akarsu|hydro/.test(raw)) return /akarsu|river/.test(raw) ? 'river' : 'dammedHydro';
-  if (/jeoterm|geothermal/.test(raw)) return 'geothermal';
-  if (/biyokutle|biomass|atik/.test(raw)) return 'biomass';
-  return 'thermal';
-}
-
-function selectDirectoryPlantResult(resultIdx) {
-  const result = (window._directoryPlantResults || [])[resultIdx];
-  if (!result) return;
-  const entry = result.entry || {};
-  const cityName = result.cityName || 'EPİAŞ kayıtlı tesis';
-  const cityKey = normalizeTR(cityName);
-  let cityIdx = allCities.findIndex(c => normalizeTR(c.n) === cityKey);
-  // EPİAŞ kayıtlarında il bilgisi varsa santrali o ilin uygulama listesine ekle.
-  if (cityIdx >= 0) {
-    const city = allCities[cityIdx];
-    let plantIdx = city.plants.findIndex(p => normalizeTR(p.p) === normalizeTR(result.name));
-    if (plantIdx < 0) {
-      const epiasMatch = (window.epiasPlantsData || []).find(p => normalizeTR(p.name) === normalizeTR(result.name));
-      const plant = {
-        p: result.name,
-        v: epiasMatch ? cleanVal(epiasMatch.dailyTotal) : 0,
-        k: epiasMatch?.type && epiasMatch.type !== 'unknown' ? epiasMatch.type : classifyDirectoryPlant(entry),
-        hourly: Array.isArray(epiasMatch?.hourly) ? ensure24(epiasMatch.hourly) : Array(24).fill(0),
-        epiasName: result.name
-      };
-      city.plants.push(plant);
-      city.totalMWh = city.plants.reduce((sum, p) => sum + cleanVal(p.v), 0);
-      plantIdx = city.plants.length - 1;
-    }
-    document.getElementById('citySearchInput').value = result.name;
-    document.getElementById('searchDropdown').style.display = 'none';
-    updateSearchClearButton();
-    currentSelectedCityIdx = cityIdx;
-    map.flyTo(city.c, 9, { duration: 1.0 });
-    handleCityClick(cityIdx);
-    openSim(cityIdx, plantIdx);
-    return;
-  }
-  // EPİAŞ il bilgisi vermediyse santral detayını yine aç; geri dönüş arama sonuçlarına olur.
-  const epiasMatch = (window.epiasPlantsData || []).find(p => normalizeTR(p.name) === normalizeTR(result.name));
-  const plant = {
-    p: result.name,
-    v: epiasMatch ? cleanVal(epiasMatch.dailyTotal) : 0,
-    k: epiasMatch?.type && epiasMatch.type !== 'unknown' ? epiasMatch.type : classifyDirectoryPlant(entry),
-    hourly: Array.isArray(epiasMatch?.hourly) ? ensure24(epiasMatch.hourly) : Array(24).fill(0)
-  };
-  window._simReturnToSearch = true;
-  document.getElementById('citySearchInput').value = result.name;
-  document.getElementById('searchDropdown').style.display = 'none';
-  updateSearchClearButton();
-  openSim(-1, -1, plant, { n: cityName || 'EPİAŞ kayıtlı tesis', plants: [], totalMWh: 0, c: [39, 35] });
-}
-
 function filterSearch(e) {
   const query = e.target.value || "";
   const normQuery = normalizeTR(query);
@@ -1615,49 +1541,93 @@ function filterSearch(e) {
     return;
   }
 
-  // ARAMA, uygulamanın kendi harita veri setinden beslenir.
-  // Böylece ekranda görünen santraller ile arama sonuçları birebir aynı olur.
-  // EPİAŞ sadece bu santrallerin üretim değerlerini günceller; santral listesi
-  // burada ayrıca ikinci bir kaynaktan oluşturulmaz.
+  // İller ayrı gösterilir; santraller ise uygulama verisi + EPİAŞ tam dizini
+  // birleştirilerek aranır. Dizin yalnızca eksik tesisleri tamamlar.
   const cityMatches = allCities
     .map((city, idx) => ({ city, idx }))
     .filter(item => normalizeTR(item.city.n).includes(normQuery));
 
-  // Aynı santral aynı il içinde veri setinde birden fazla kez bulunabiliyor.
-  // Aramada bunu tek kayıt gösteriyoruz. Farklı illerde aynı isimli santraller
-  // ise ayrı tutuluyor; çünkü bunlar farklı tesis kayıtları olabilir.
   const plantMatches = [];
   const seenPlantKeys = new Set();
+  const cityKey = value => normalizeTR(String(value || '').trim());
+  const keyFor = (cityName, plantName) => `${cityKey(cityName)}::${cityKey(plantName)}`;
+
   allCities.forEach((city, cityIdx) => {
     (city.plants || []).forEach((plant, plantIdx) => {
       const rawName = String(plant?.p || '').trim();
-      const name = normalizeTR(rawName);
-      const cityName = normalizeTR(city.n);
-      if (!name) return;
-      if (!(name.includes(normQuery) || cityName.includes(normQuery))) return;
-
-      const plantKey = `${cityIdx}::${name}`;
-      if (seenPlantKeys.has(plantKey)) return;
-      seenPlantKeys.add(plantKey);
-
-      plantMatches.push({
-        source: "system",
-        cityIdx,
-        plantIdx,
-        city,
-        plant
-      });
+      if (!rawName) return;
+      const nameKey = cityKey(rawName);
+      const cityNameKey = cityKey(city.n);
+      if (!(nameKey.includes(normQuery) || cityNameKey.includes(normQuery))) return;
+      const key = keyFor(city.n, rawName);
+      if (seenPlantKeys.has(key)) return;
+      seenPlantKeys.add(key);
+      plantMatches.push({ source: 'system', cityIdx, plantIdx, city, plant });
     });
   });
 
-  // Harita veri setinde olmayan veya henüz o il listesine eşleşmemiş tesisleri de
-  // EPİAŞ'ın tam santral dizininden aramaya dahil et. Mevcut kayıtlar çift gösterilmez.
-  const directoryMatches = buildDirectorySearchMatches(normQuery);
-  window._searchPlantResults = plantMatches;
-  window._directoryPlantResults = directoryMatches;
+  const directory = Array.isArray(window.epiasPlantDirectory) ? window.epiasPlantDirectory : [];
+  const generation = Array.isArray(window.epiasPlantsData) ? window.epiasPlantsData : [];
+  const getFirst = (obj, keys) => {
+    for (const key of keys) if (obj && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim()) return String(obj[key]).trim();
+    return '';
+  };
+  const typeFromDirectory = value => {
+    const t = normalizeTR(value);
+    if (/ruzgar|wind|res/.test(t)) return 'wind';
+    if (/gunes|solar|sun|ges|fotovoltaik/.test(t)) return 'sun';
+    if (/jeotermal|geothermal/.test(t)) return 'geothermal';
+    if (/biyokutle|biomass|atik/.test(t)) return 'biomass';
+    if (/nehir|river|akarsu/.test(t)) return 'river';
+    if (/hidro|hydro|baraj|hes/.test(t)) return 'dammedHydro';
+    if (/dogalgaz|natural gas|ithal komur|linyit|termik|coal|fuel|termal/.test(t)) return 'naturalGas';
+    return 'unknown';
+  };
 
-  if (cityMatches.length === 0 && plantMatches.length === 0 && directoryMatches.length === 0) {
-    dropdown.innerHTML = `<div style="padding:10px 12px;font-family:'JetBrains Mono';font-size:11px;color:#94a3b8;">Uygulamada eşleşen il veya santral bulunamadı</div>`;
+  // EPİAŞ dizinindeki bütün tesisler sonuçlara katılır. Uygulama listesindeki
+  // aynı il + aynı santral zaten varsa ikinci kez gösterilmez.
+  directory.forEach(entry => {
+    const name = getFirst(entry, ['name', 'powerPlantName', 'powerplantName']);
+    if (!name) return;
+    const province = getFirst(entry, ['city', 'cityName', 'province', 'provinceName', 'il', 'ilAdi', 'locationCity']);
+    const directoryCityKey = cityKey(province);
+    const nameKey = cityKey(name);
+    if (!(nameKey.includes(normQuery) || directoryCityKey.includes(normQuery))) return;
+
+    let matchedCityIdx = directoryCityKey
+      ? allCities.findIndex(c => cityKey(c.n) === directoryCityKey || cityKey(c.n).includes(directoryCityKey) || directoryCityKey.includes(cityKey(c.n)))
+      : -1;
+    const resolvedCity = matchedCityIdx >= 0 ? allCities[matchedCityIdx] : null;
+    const displayCityName = resolvedCity?.n || province || 'EPİAŞ Santral Dizini';
+    const dedupeKey = keyFor(displayCityName, name);
+    if (seenPlantKeys.has(dedupeKey)) return;
+
+    // Üretim kaydı varsa gerçek değerini kullan; yoksa 0 MWh göster.
+    const gen = generation.find(x => cityKey(x.name) === nameKey) || null;
+    const lat = Number(getFirst(entry, ['latitude', 'lat']));
+    const lon = Number(getFirst(entry, ['longitude', 'lon', 'lng']));
+    const city = resolvedCity || {
+      n: displayCityName,
+      c: Number.isFinite(lat) && Number.isFinite(lon) && lat !== 0 && lon !== 0 ? [lat, lon] : (allCities[0]?.c || [39.0, 35.0]),
+      totalMWh: 0,
+      plants: []
+    };
+    const plant = {
+      p: name,
+      k: typeFromDirectory(getFirst(entry, ['powerPlantType', 'powerplantType', 'type'])) || 'unknown',
+      v: gen ? cleanVal(gen.dailyTotal) : 0,
+      hourly: gen ? ensure24(gen.hourly) : Array(24).fill(0),
+      epiasName: name,
+      epiasId: entry.id || null
+    };
+    seenPlantKeys.add(dedupeKey);
+    plantMatches.push({ source: 'directory', cityIdx: matchedCityIdx, plantIdx: -1, city, plant });
+  });
+
+  window._searchPlantResults = plantMatches;
+
+  if (cityMatches.length === 0 && plantMatches.length === 0) {
+    dropdown.innerHTML = `<div style="padding:10px 12px;font-family:'JetBrains Mono';font-size:11px;color:#94a3b8;">Eşleşen il veya santral bulunamadı</div>`;
     dropdown.style.display = "block";
     return;
   }
@@ -1673,45 +1643,49 @@ function filterSearch(e) {
     const plant = m.plant || {};
     const name = plant.p || 'İsimsiz Santral';
     const value = cleanVal(plant.v);
-    const type = typeCfg[plant.k]?.l || plant.k || 'Bilinmiyor';
+    const type = typeCfg[plant.k]?.l || (plant.k === 'unknown' ? 'Tür bilgisi yok' : plant.k) || 'Bilinmiyor';
+    const sourceLabel = m.source === 'directory' ? 'EPİAŞ' : 'Uygulama';
     return `
       <div onclick="selectSearchPlantResult(${resultIdx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:10px;cursor:pointer;border-bottom:1px solid rgba(16,185,129,.14);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;transition:.2s;" onmouseover="this.style.background='rgba(16,185,129,.12)'" onmouseout="this.style.background='transparent'">
-        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${name} <small style="color:#64748b;">[${m.city.n}] • ${type}</small></span>
+        <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${name} <small style="color:#64748b;">[${m.city.n}] • ${type} • ${sourceLabel}</small></span>
         <small style="color:var(--neon-green);font-weight:bold;white-space:nowrap;">${value.toFixed(0)} MWh</small>
       </div>`;
   }).join('');
 
-  const directoryHtml = directoryMatches.map((m, resultIdx) => `
-    <div onclick="selectDirectoryPlantResult(${resultIdx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:10px;cursor:pointer;border-bottom:1px solid rgba(249,212,35,.14);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;" onmouseover="this.style.background='rgba(249,212,35,.10)'" onmouseout="this.style.background='transparent'">
-      <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${m.name} <small style="color:#94a3b8;">[${m.cityName || 'EPİAŞ dizini'}] • EPİAŞ</small></span>
-      <small style="color:var(--neon-yellow);font-weight:bold;white-space:nowrap;">DİZİN</small>
-    </div>`).join('');
-
   dropdown.innerHTML = `
     ${cityHtml ? `<div style="padding:5px 10px;background:rgba(0,210,255,.06);color:#38bdf8;font:700 8px 'JetBrains Mono';letter-spacing:1px;">İLLER (${cityMatches.length})</div>${cityHtml}` : ''}
     ${plantHtml ? `<div style="padding:5px 10px;background:rgba(16,185,129,.06);color:#34d399;font:700 8px 'JetBrains Mono';letter-spacing:1px;">SANTRALLER (${plantMatches.length})</div>${plantHtml}` : ''}
-    ${directoryHtml ? `<div style="padding:5px 10px;background:rgba(249,212,35,.06);color:#f9d423;font:700 8px 'JetBrains Mono';letter-spacing:1px;">EPİAŞ TAM SANTRAL DİZİNİ (${directoryMatches.length})</div>${directoryHtml}` : ''}
   `;
   dropdown.style.display = "block";
 }
 
 function selectSearchPlantResult(resultIdx) {
   const result = (window._searchPlantResults || [])[resultIdx];
-  if (!result || result.source !== 'system') return;
+  if (!result) return;
 
-  const city = allCities[result.cityIdx];
-  const plant = city?.plants?.[result.plantIdx];
-  if (!city || !plant) return;
-
-  document.getElementById("citySearchInput").value = plant.p;
+  const input = document.getElementById("citySearchInput");
+  if (input) input.value = result.plant?.p || '';
   document.getElementById("searchDropdown").style.display = "none";
   updateSearchClearButton();
 
-  // Arama sonucu doğrudan uygulamanın kendi tesis kaydını açar.
-  // Böylece arama ile harita/tesis paneli arasında isim, konum ve üretim
-  // değeri açısından ikinci bir veri kaynağı oluşmaz.
-  map.flyTo(city.c, 9, { duration: 1.0 });
-  openSim(result.cityIdx, result.plantIdx);
+  if (result.source === 'system') {
+    const city = allCities[result.cityIdx];
+    const plant = city?.plants?.[result.plantIdx];
+    if (!city || !plant) return;
+    window._simReturnToSearch = false;
+    map.flyTo(city.c, 9, { duration: 1.0 });
+    openSim(result.cityIdx, result.plantIdx);
+    return;
+  }
+
+  // Dizin kaydı uygulama listesinde yoksa da detay ekranını aç. Üretim kaydı
+  // bulunmuyorsa v=0 ve saatlik değerler 0 olarak gösterilir.
+  const city = result.city;
+  const plant = result.plant;
+  if (!city || !plant) return;
+  window._simReturnToSearch = true;
+  if (Array.isArray(city.c) && window.map) map.flyTo(city.c, 7, { duration: 1.0 });
+  openSim(result.cityIdx, -1, plant, city);
 }
 
 function selectPlantFromSearch(cityIdx, plantIdx) {
@@ -1741,20 +1715,13 @@ function checkSearchEnter(e) {
   const normQuery = normalizeTR(e.target.value);
   if (!normQuery) return;
 
-  const cityIdx = allCities.findIndex(c => normalizeTR(c.n).includes(normQuery));
-  if (cityIdx !== -1) {
-    selectCityFromSearch(cityIdx);
-    return;
-  }
-
   const results = window._searchPlantResults || [];
-  const exact = results.findIndex(r => {
-    const name = r.plant?.name || r.plant?.p || '';
-    return normalizeTR(name) === normQuery;
-  });
-  const partial = results.findIndex(r => normalizeTR(r.plant?.name || r.plant?.p || '').includes(normQuery));
+  const exact = results.findIndex(r => normalizeTR(r.plant?.p || r.plant?.name || '') === normQuery);
+  const partial = results.findIndex(r => normalizeTR(r.plant?.p || r.plant?.name || '').includes(normQuery));
   const idx = exact !== -1 ? exact : partial;
-  if (idx !== -1) selectSearchPlantResult(idx);
+  if (idx !== -1) { selectSearchPlantResult(idx); return; }
+  const cityIdx = allCities.findIndex(c => normalizeTR(c.n).includes(normQuery));
+  if (cityIdx !== -1) selectCityFromSearch(cityIdx);
 }
 
 document.addEventListener('click', (e) => {
@@ -2103,6 +2070,19 @@ function closeSim() {
       }
     }
 }
+
+function syncEpiasStatusVisibility() {
+  const status = document.getElementById('epiasStatus');
+  const sim = document.getElementById('simOverlay');
+  const selection = document.getElementById('selectionOverlay');
+  const login = document.getElementById('epiasLoginOverlay');
+  if (!status) return;
+  const simOpen = !!sim && getComputedStyle(sim).display !== 'none';
+  const selectionOpen = !!selection && getComputedStyle(selection).display !== 'none';
+  const loginOpen = !!login && getComputedStyle(login).display !== 'none';
+  status.classList.toggle('map-view-visible', !simOpen && !selectionOpen && !loginOpen);
+}
+
 
 
 // CANLI TELEMETRİ GÖRSELİ: EPİAŞ üretim/toplam verilerini ezmez.
@@ -2557,6 +2537,14 @@ setInterval(() => {
   }
 
   btn.addEventListener('click', connectEpias);
+  // EPİAŞ tarih/durum kartını yalnızca harita ana ekranında göster.
+  ['simOverlay', 'selectionOverlay', 'epiasLoginOverlay'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.MutationObserver) {
+      new MutationObserver(syncEpiasStatusVisibility).observe(el, { attributes:true, attributeFilter:['style'] });
+    }
+  });
+  syncEpiasStatusVisibility();
 
   [user, pass].forEach(input => {
     input.addEventListener('keydown', e => {
