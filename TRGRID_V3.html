@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-POQZQ2TN6P"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-POQZQ2TN6P');
-</script>
+  <!-- Google Analytics 4: SantralMatik ziyaretçi ölçümü -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-POQZQ2TN6P"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-POQZQ2TN6P');
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>SantralMatik | EPİAŞ Gerçek Üretim Verisi</title>
@@ -1523,6 +1522,86 @@ function clearCitySearch(e) {
   input.focus();
 }
 
+function buildDirectorySearchMatches(normQuery) {
+  const directory = Array.isArray(window.epiasPlantDirectory) ? window.epiasPlantDirectory : [];
+  const results = [];
+  const seen = new Set();
+  const cityKeys = ['city','cityName','province','provinceName','il','ilAdi','locationCity'];
+  directory.forEach((entry) => {
+    const name = String(entry?.name || entry?.powerPlantName || '').trim();
+    if (!name) return;
+    const cityName = String(cityKeys.map(k => entry?.[k]).find(v => v != null && String(v).trim()) || '').trim();
+    const normName = normalizeTR(name);
+    const normCity = normalizeTR(cityName);
+    if (!(normName.includes(normQuery) || normCity.includes(normQuery))) return;
+    const key = `${normCity}::${normName}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    // Sistem listesindeki aynı il + santral kaydı varsa ayrıca EPİAŞ sonucu göstermeyelim.
+    const alreadyInSystem = allCities.some(c => (!normCity || normalizeTR(c.n) === normCity) && (c.plants || []).some(p => normalizeTR(p.p) === normName));
+    if (!alreadyInSystem) results.push({ source: 'directory', entry, name, cityName });
+  });
+  return results;
+}
+
+function classifyDirectoryPlant(entry) {
+  const raw = normalizeTR(String(entry?.powerPlantType || entry?.powerplantType || entry?.type || ''));
+  if (/ruzgar|wind/.test(raw)) return 'wind';
+  if (/gunes|solar|sun|fotovoltaik/.test(raw)) return 'sun';
+  if (/hidro|baraj|akarsu|hydro/.test(raw)) return /akarsu|river/.test(raw) ? 'river' : 'dammedHydro';
+  if (/jeoterm|geothermal/.test(raw)) return 'geothermal';
+  if (/biyokutle|biomass|atik/.test(raw)) return 'biomass';
+  return 'thermal';
+}
+
+function selectDirectoryPlantResult(resultIdx) {
+  const result = (window._directoryPlantResults || [])[resultIdx];
+  if (!result) return;
+  const entry = result.entry || {};
+  const cityName = result.cityName || 'EPİAŞ kayıtlı tesis';
+  const cityKey = normalizeTR(cityName);
+  let cityIdx = allCities.findIndex(c => normalizeTR(c.n) === cityKey);
+  // EPİAŞ kayıtlarında il bilgisi varsa santrali o ilin uygulama listesine ekle.
+  if (cityIdx >= 0) {
+    const city = allCities[cityIdx];
+    let plantIdx = city.plants.findIndex(p => normalizeTR(p.p) === normalizeTR(result.name));
+    if (plantIdx < 0) {
+      const epiasMatch = (window.epiasPlantsData || []).find(p => normalizeTR(p.name) === normalizeTR(result.name));
+      const plant = {
+        p: result.name,
+        v: epiasMatch ? cleanVal(epiasMatch.dailyTotal) : 0,
+        k: epiasMatch?.type && epiasMatch.type !== 'unknown' ? epiasMatch.type : classifyDirectoryPlant(entry),
+        hourly: Array.isArray(epiasMatch?.hourly) ? ensure24(epiasMatch.hourly) : Array(24).fill(0),
+        epiasName: result.name
+      };
+      city.plants.push(plant);
+      city.totalMWh = city.plants.reduce((sum, p) => sum + cleanVal(p.v), 0);
+      plantIdx = city.plants.length - 1;
+    }
+    document.getElementById('citySearchInput').value = result.name;
+    document.getElementById('searchDropdown').style.display = 'none';
+    updateSearchClearButton();
+    currentSelectedCityIdx = cityIdx;
+    map.flyTo(city.c, 9, { duration: 1.0 });
+    handleCityClick(cityIdx);
+    openSim(cityIdx, plantIdx);
+    return;
+  }
+  // EPİAŞ il bilgisi vermediyse santral detayını yine aç; geri dönüş arama sonuçlarına olur.
+  const epiasMatch = (window.epiasPlantsData || []).find(p => normalizeTR(p.name) === normalizeTR(result.name));
+  const plant = {
+    p: result.name,
+    v: epiasMatch ? cleanVal(epiasMatch.dailyTotal) : 0,
+    k: epiasMatch?.type && epiasMatch.type !== 'unknown' ? epiasMatch.type : classifyDirectoryPlant(entry),
+    hourly: Array.isArray(epiasMatch?.hourly) ? ensure24(epiasMatch.hourly) : Array(24).fill(0)
+  };
+  window._simReturnToSearch = true;
+  document.getElementById('citySearchInput').value = result.name;
+  document.getElementById('searchDropdown').style.display = 'none';
+  updateSearchClearButton();
+  openSim(-1, -1, plant, { n: cityName || 'EPİAŞ kayıtlı tesis', plants: [], totalMWh: 0, c: [39, 35] });
+}
+
 function filterSearch(e) {
   const query = e.target.value || "";
   const normQuery = normalizeTR(query);
@@ -1571,9 +1650,13 @@ function filterSearch(e) {
     });
   });
 
+  // Harita veri setinde olmayan veya henüz o il listesine eşleşmemiş tesisleri de
+  // EPİAŞ'ın tam santral dizininden aramaya dahil et. Mevcut kayıtlar çift gösterilmez.
+  const directoryMatches = buildDirectorySearchMatches(normQuery);
   window._searchPlantResults = plantMatches;
+  window._directoryPlantResults = directoryMatches;
 
-  if (cityMatches.length === 0 && plantMatches.length === 0) {
+  if (cityMatches.length === 0 && plantMatches.length === 0 && directoryMatches.length === 0) {
     dropdown.innerHTML = `<div style="padding:10px 12px;font-family:'JetBrains Mono';font-size:11px;color:#94a3b8;">Uygulamada eşleşen il veya santral bulunamadı</div>`;
     dropdown.style.display = "block";
     return;
@@ -1598,9 +1681,16 @@ function filterSearch(e) {
       </div>`;
   }).join('');
 
+  const directoryHtml = directoryMatches.map((m, resultIdx) => `
+    <div onclick="selectDirectoryPlantResult(${resultIdx})" style="padding:8px 12px;font-family:'JetBrains Mono';font-size:10px;cursor:pointer;border-bottom:1px solid rgba(249,212,35,.14);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px;" onmouseover="this.style.background='rgba(249,212,35,.10)'" onmouseout="this.style.background='transparent'">
+      <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">⚡ ${m.name} <small style="color:#94a3b8;">[${m.cityName || 'EPİAŞ dizini'}] • EPİAŞ</small></span>
+      <small style="color:var(--neon-yellow);font-weight:bold;white-space:nowrap;">DİZİN</small>
+    </div>`).join('');
+
   dropdown.innerHTML = `
     ${cityHtml ? `<div style="padding:5px 10px;background:rgba(0,210,255,.06);color:#38bdf8;font:700 8px 'JetBrains Mono';letter-spacing:1px;">İLLER (${cityMatches.length})</div>${cityHtml}` : ''}
     ${plantHtml ? `<div style="padding:5px 10px;background:rgba(16,185,129,.06);color:#34d399;font:700 8px 'JetBrains Mono';letter-spacing:1px;">SANTRALLER (${plantMatches.length})</div>${plantHtml}` : ''}
+    ${directoryHtml ? `<div style="padding:5px 10px;background:rgba(249,212,35,.06);color:#f9d423;font:700 8px 'JetBrains Mono';letter-spacing:1px;">EPİAŞ TAM SANTRAL DİZİNİ (${directoryMatches.length})</div>${directoryHtml}` : ''}
   `;
   dropdown.style.display = "block";
 }
@@ -1736,6 +1826,12 @@ let activeSimState = { plant: null, baseV: 0, currentType: 'line', filled: true,
 function openSim(cityIdx, plantIdx, overridePlant = null, overrideCity = null) {
     const city = overrideCity || allCities[cityIdx];
     const plant = overridePlant || city.plants[plantIdx];
+    if (window._simReturnToSearch) {
+      window._simReturnContext = { cityIdx: -1, plantIdx };
+    } else {
+      window._simReturnContext = { cityIdx: Number.isInteger(cityIdx) && cityIdx >= 0 ? cityIdx : currentSelectedCityIdx, plantIdx };
+    }
+    window._simReturnToSearch = false;
     activeSimState.plant = plant;
     activeSimState.baseV = plant.v;
 
@@ -1989,10 +2085,23 @@ function varColor(varName) { return getComputedStyle(document.documentElement).g
 function closeSelection() {
   document.getElementById("selectionOverlay").style.display = "none";
 }
-function closeSim() { 
+function closeSim() {
     if (activeSimTimer) clearInterval(activeSimTimer);
-    document.getElementById("simOverlay").style.display = "none"; 
-    document.getElementById("selectionOverlay").style.display = "flex";
+    document.getElementById("simOverlay").style.display = "none";
+    const returnContext = window._simReturnContext || {};
+    const cityIdx = returnContext.cityIdx;
+    if (Number.isInteger(cityIdx) && cityIdx >= 0 && allCities[cityIdx]) {
+      currentSelectedCityIdx = cityIdx;
+      handleCityClick(cityIdx);
+      document.getElementById("selectionOverlay").style.display = "flex";
+    } else {
+      document.getElementById("selectionOverlay").style.display = "none";
+      const input = document.getElementById('citySearchInput');
+      if (input && input.value.trim()) {
+        filterSearch({ target: input });
+        document.getElementById('searchDropdown').style.display = 'block';
+      }
+    }
 }
 
 
@@ -2007,7 +2116,8 @@ setInterval(() => {
 <!-- EPİAŞ BAĞLANTI DURUMU -->
 <div id="epiasStatus" style="position:fixed;right:18px;top:86px;z-index:1000000;background:#06111d;border:1px solid #334155;color:#94a3b8;padding:7px 10px;border-radius:4px;font:10px 'JetBrains Mono',monospace;box-shadow:0 0 18px rgba(0,210,255,.12);">
   <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:6px;box-shadow:0 0 8px rgba(16,185,129,.7);"></span>
-  <span id="epiasStatusText">EPİAŞ: BAĞLANTI BEKLENİYOR</span>
+  <div id="epiasStatusText" style="font-weight:bold;color:#10b981;">EPİAŞ: BAĞLANTI BEKLENİYOR</div>
+  <div id="epiasStatusDetails" style="margin-top:4px;line-height:1.6;color:#cbd5e1;">VERİ TARİHİ: --<br>SON GÜNCELLEME: --</div>
 </div>
 
 <div id="epiasLoginOverlay" style="position:fixed;inset:0;z-index:1000001;background:rgba(1,4,9,.96);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(10px);">
@@ -2298,7 +2408,10 @@ setInterval(() => {
     renderMapMarkers();
 
     const badge = document.getElementById('epiasStatusText');
-    badge.textContent = 'EPİAŞ: BAĞLI';
+    if (badge) badge.textContent = 'EPİAŞ: BAĞLI';
+    const details = document.getElementById('epiasStatusDetails');
+    const selectedDate = document.getElementById('mapDate')?.value || document.getElementById('epiasDate')?.value || payload.date || '--';
+    if (details) details.innerHTML = `VERİ TARİHİ: ${formatTRDate(selectedDate)}<br>SON GÜNCELLEME: ${new Date().toLocaleString('tr-TR')}`;
 
     return { count: plants.length, matched, unmatched, totals };
   }
