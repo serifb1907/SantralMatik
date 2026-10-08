@@ -1572,6 +1572,21 @@ function filterSearch(e) {
     for (const key of keys) if (obj && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim()) return String(obj[key]).trim();
     return '';
   };
+  // EPİAŞ üretim kayıtlarını önce santral ID'siyle eşleştir; isimler platformlar
+  // arasında kısaltma/ünvan farkı taşıyabildiği için yalnızca ada güvenme.
+  const idKey = obj => getFirst(obj, ['powerPlantId', 'powerplantId', 'plantId', 'id', 'powerPlantID']);
+  const generationById = new Map();
+  generation.forEach(item => { const id = idKey(item); if (id) generationById.set(id, item); });
+  const generationByName = new Map();
+  generation.forEach(item => { const key = norm(item.name || item.powerPlantName || ''); if (key && !generationByName.has(key)) generationByName.set(key, item); });
+  const findGenerationForDirectoryEntry = entry => {
+    const id = idKey(entry);
+    if (id && generationById.has(id)) return generationById.get(id);
+    const name = getFirst(entry, ['name', 'powerPlantName', 'powerplantName']);
+    const exact = generationByName.get(norm(name));
+    if (exact) return exact;
+    return typeof findEpiasPlant === 'function' ? findEpiasPlant(generationByName, name) : null;
+  };
   const typeFromDirectory = value => {
     const t = normalizeTR(value);
     if (/ruzgar|wind|res/.test(t)) return 'wind';
@@ -1600,10 +1615,22 @@ function filterSearch(e) {
     const resolvedCity = matchedCityIdx >= 0 ? allCities[matchedCityIdx] : null;
     const displayCityName = resolvedCity?.n || province || 'EPİAŞ Santral Dizini';
     const dedupeKey = keyFor(displayCityName, name);
-    if (seenPlantKeys.has(dedupeKey)) return;
+    // Önce EPİAŞ ID'sinden üretim kaydını bul. Aynı tesis uygulama listesinde
+    // varsa ikinci satır oluşturma; mevcut arama sonucunu doğru EPİAŞ verisiyle güncelle.
+    const gen = findGenerationForDirectoryEntry(entry);
+    if (seenPlantKeys.has(dedupeKey)) {
+      const existing = plantMatches.find(item => keyFor(item.city?.n, item.plant?.p) === dedupeKey);
+      if (existing && gen) {
+        existing.plant.v = cleanVal(gen.dailyTotal);
+        existing.plant.hourly = ensure24(gen.hourly);
+        existing.plant.epiasName = gen.name || name;
+        existing.plant.epiasId = idKey(entry) || existing.plant.epiasId || null;
+        existing.plant.dataStatus = 'matched';
+      }
+      return;
+    }
 
     // Üretim kaydı varsa gerçek değerini kullan; yoksa 0 MWh göster.
-    const gen = generation.find(x => cityKey(x.name) === nameKey) || null;
     const lat = Number(getFirst(entry, ['latitude', 'lat']));
     const lon = Number(getFirst(entry, ['longitude', 'lon', 'lng']));
     const city = resolvedCity || {
@@ -1617,8 +1644,9 @@ function filterSearch(e) {
       k: typeFromDirectory(getFirst(entry, ['powerPlantType', 'powerplantType', 'type'])) || 'unknown',
       v: gen ? cleanVal(gen.dailyTotal) : 0,
       hourly: gen ? ensure24(gen.hourly) : Array(24).fill(0),
-      epiasName: name,
-      epiasId: entry.id || null
+      epiasName: gen?.name || name,
+      epiasId: idKey(entry) || null,
+      dataStatus: gen ? 'matched' : 'no-generation-record'
     };
     seenPlantKeys.add(dedupeKey);
     plantMatches.push({ source: 'directory', cityIdx: matchedCityIdx, plantIdx: -1, city, plant });
@@ -1837,7 +1865,10 @@ function openSim(cityIdx, plantIdx, overridePlant = null, overrideCity = null) {
         teknikDetay = `<br>&gt; [TELEMETRİ]: Termik kazan buhar basıncı ve sıcaklığı (540°C) nominal parametrelerde. Türbin-jeneratör mili eksenel sapması sıfır.<br>&gt; [ŞEBEKE]: Jeneratör uyartım sistemi deverede. Enterkonnekte şebenin baz yük ihtiyacı kesintisiz karşılanıyor.`;
     }
 
-    log.innerHTML = `&gt; [${zaman}] [BAĞLANTI_OK]: ${city.n} // ${plant.p} SCADA telemetri köprüsü kuruldu.<br>&gt; [EPİAŞ]: Şeffaflık Platformu veritabanından ${plant.v.toFixed(2)} MWh üretim verisi doğrulandı.${teknikDetay}`;
+    const epiasDataLine = plant.dataStatus === 'no-generation-record'
+      ? `&gt; [EPİAŞ]: Bu santral için seçili tarihte üretim kaydı bulunamadı; ekranda 0 MWh gösteriliyor.`
+      : `&gt; [EPİAŞ]: Şeffaflık Platformu verisinden ${plant.v.toFixed(2)} MWh üretim kaydı alındı.`;
+    log.innerHTML = `&gt; [${zaman}] [BAĞLANTI_OK]: ${city.n} // ${plant.p} SCADA telemetri köprüsü kuruldu.<br>${epiasDataLine}${teknikDetay}`;
     
 
     if (activeSimTimer) clearInterval(activeSimTimer);
