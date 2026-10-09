@@ -869,8 +869,8 @@
 /* ================= EPİAŞ DURUM KARTI ================= */
 #epiasStatus{
   --st:#64748b; --st-rgb:100,116,139;
-  position:fixed; top:86px; right:18px; z-index:1000000;
-  display:none; width:252px; box-sizing:border-box;
+  position:fixed; top:86px; right:18px; z-index:1000002;
+  display:block; width:252px; box-sizing:border-box;
   padding:10px 12px 12px;
   font:10px/1.4 'JetBrains Mono',monospace; color:#94a3b8;
   background:linear-gradient(180deg,rgba(9,22,40,.95),rgba(2,8,18,.95));
@@ -2147,7 +2147,8 @@ function syncEpiasStatusVisibility() {
   const simOpen = !!sim && getComputedStyle(sim).display !== 'none';
   const selectionOpen = !!selection && getComputedStyle(selection).display !== 'none';
   const loginOpen = !!login && getComputedStyle(login).display !== 'none';
-  status.classList.toggle('map-view-visible', !simOpen && !selectionOpen && !loginOpen);
+  // Durum kartı artık tüm ekranlarda görünür. Katmanların üzerinde kalır.
+  status.classList.add('map-view-visible');
 }
 
 
@@ -2184,7 +2185,7 @@ window.EpiasStatus = (() => {
   if (!root) return { loading(){}, progress(){}, success(){}, error(){}, ping(){} };
   const FRESH_MS = 10 * 60 * 1000, STALE_MS = 30 * 60 * 1000;
   const LABELS = {idle:'BEKLENİYOR',loading:'SORGULANIYOR',ok:'BAĞLI',aging:'ESKİYOR',stale:'ESKİ VERİ',error:'HATA'};
-  const s = {phase:'idle',pending:null,stage:'',syncedAt:null,dataDate:null,sourceTime:null,durationMs:null,records:null,matched:null,error:''};
+  const s = {phase:'idle',pending:null,stage:'',startedAt:null,syncedAt:null,dataDate:null,sourceTime:null,durationMs:null,records:null,matched:null,error:''};
   const trDate = d => {const p=String(d||'').split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:'--'};
   const clock = ms => new Date(ms).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   const ago = ms => {const sec=Math.max(0,Math.round(ms/1000));if(sec<5)return 'şimdi';if(sec<60)return `${sec} sn önce`;const m=Math.floor(sec/60);return m<60?`${m} dk önce`:`${Math.floor(m/60)} sa ${m%60} dk önce`};
@@ -2194,29 +2195,31 @@ window.EpiasStatus = (() => {
   function render(){
     const v=view();root.dataset.state=v;put('esBadge',LABELS[v]||LABELS.idle);put('esDate',trDate(s.dataDate));
     put('esSync',s.syncedAt?ago(Date.now()-s.syncedAt):'--',s.syncedAt?new Date(s.syncedAt).toLocaleString('tr-TR'):'');
-    put('esSource',srcTime(s.sourceTime));put('esDuration',s.durationMs!=null?(s.durationMs/1000).toFixed(1)+' sn':'--');
+    put('esSource',srcTime(s.sourceTime));
+    const elapsedMs = v==='loading' && s.startedAt!=null ? performance.now()-s.startedAt : s.durationMs;
+    put('esDuration',elapsedMs!=null?(elapsedMs/1000).toFixed(1)+' sn':'--',v==='loading'?'Devam eden veri çekme işleminin geçen süresi':'Son tamamlanan veri çekme işleminin süresi');
     put('esRecords',s.records!=null?`${s.records} / ${s.matched}`:'--');
     const meter=$('esMeter');if(meter&&v!=='loading'){meter.classList.remove('indet');const f=s.syncedAt?Math.max(0,1-(Date.now()-s.syncedAt)/STALE_MS):0;meter.style.width=(v==='error'?100:f*100).toFixed(1)+'%'}
     let note={idle:'EPİAŞ bağlantısı kurulduğunda veriler burada izlenir.',loading:`${trDate(s.pending)} • ${s.stage||'Bağlanılıyor...'}`,ok:'Veriler güncel.',aging:'Veriler bir süredir yenilenmedi.',stale:'Veriler eskidi. Tarihi yeniden seçerek yenileyin.',error:s.error||'EPİAŞ verileri alınamadı.'}[v];
     if(v==='error'&&s.syncedAt)note+=` Son başarılı senkron: ${clock(s.syncedAt)}.`;put('esNote',note);
   }
-  async function pingServer(){const el=$('esServer');if(!el)return;const t0=performance.now();try{const r=await fetch('/health',{cache:'no-store'});if(!r.ok)throw new Error();const h=await r.json().catch(()=>({}));const ms=Math.round(performance.now()-t0);el.dataset.h=ms>1500?'slow':'ok';const jobs=h.activeJobs!=null&&h.maxJobs?` · ${h.activeJobs}/${h.maxJobs} iş`:'';el.textContent=`${ms} ms${jobs}`}catch(_){el.dataset.h='down';el.textContent='ULAŞILAMIYOR'}}
+  async function pingServer(){const el=$('esServer');if(!el)return;const t0=performance.now();try{const r=await fetch('/health',{cache:'no-store'});if(!r.ok){el.dataset.h='down';el.textContent=`HTTP ${r.status}`;el.title='Sunucu sağlık kontrolü /health isteğine bu HTTP yanıtını verdi.';return}const h=await r.json();if(h.status!=='ok')throw new Error('Beklenmeyen sağlık yanıtı');const ms=Math.round(performance.now()-t0);el.dataset.h=ms>1500?'slow':'ok';const jobs=h.activeJobs!=null&&h.maxJobs?` · ${h.activeJobs}/${h.maxJobs} iş`:'';el.textContent=`${ms} ms${jobs}`;el.title='SantralMatik sunucusunun /health uç noktası yanıt veriyor.'}catch(_){el.dataset.h='down';el.textContent='API YANIT YOK';el.title='SantralMatik sunucusundaki /health uç noktasına ulaşılamadı. Eski Python dosyası dağıtılmış, servis durmuş veya bağlantı başarısız olabilir.'}}
   const head=$('esHead');const setCollapsed=c=>{root.classList.toggle('collapsed',c);head.setAttribute('aria-expanded',String(!c))};
   const toggle=()=>{const c=!root.classList.contains('collapsed');setCollapsed(c);try{localStorage.setItem('esCollapsed',c?'1':'0')}catch(_){}};
   head.addEventListener('click',toggle);head.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
   let saved=null;try{saved=localStorage.getItem('esCollapsed')}catch(_){}
   if(saved==='1'||(saved===null&&window.matchMedia&&matchMedia('(max-width:768px)').matches))setCollapsed(true);
   // Ana script durum kutusu DOM'a eklenmeden önce çalıştığı için görünürlüğü burada da eşitle.
-  const syncVisibility=()=>{const ids=['simOverlay','selectionOverlay','epiasLoginOverlay'];const blocked=ids.some(id=>{const e=$(id);return e&&getComputedStyle(e).display!=='none'});root.classList.toggle('map-view-visible',!blocked)};
+  const syncVisibility=()=>{root.classList.add('map-view-visible')};
   const initVisibility=()=>{['simOverlay','selectionOverlay','epiasLoginOverlay'].forEach(id=>{const e=$(id);if(e&&window.MutationObserver)new MutationObserver(syncVisibility).observe(e,{attributes:true,attributeFilter:['style','class']})});syncVisibility()};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initVisibility,{once:true});else initVisibility();
   window.addEventListener('resize',syncVisibility);
   setInterval(()=>{if(!document.hidden)render()},1000);pingServer();setInterval(()=>{if(!document.hidden)pingServer()},60000);render();
   return {
-    loading(dateStr){s.phase='loading';s.pending=dateStr;s.stage='EPİAŞ bağlantısı hazırlanıyor...';const m=$('esMeter');if(m){m.style.width='';m.classList.add('indet')}render()},
+    loading(dateStr){s.phase='loading';s.pending=dateStr;s.stage='EPİAŞ bağlantısı hazırlanıyor...';s.startedAt=performance.now();s.durationMs=null;const m=$('esMeter');if(m){m.style.width='';m.classList.add('indet')}render()},
     progress(pct,stage){if(stage)s.stage=stage;const m=$('esMeter');if(m&&pct>0){m.classList.remove('indet');m.style.width=Math.min(100,pct)+'%'}render()},
-    success({dataDate,records,matched,sourceTime,durationMs}){Object.assign(s,{phase:'ok',syncedAt:Date.now(),dataDate,records,matched,sourceTime,durationMs,error:''});render()},
-    error(msg){s.phase='error';s.error=String(msg||'').slice(0,120);render()},ping:pingServer
+    success({dataDate,records,matched,sourceTime,durationMs}){Object.assign(s,{phase:'ok',startedAt:null,syncedAt:Date.now(),dataDate,records,matched,sourceTime,durationMs,error:''});render()},
+    error(msg){if(s.startedAt!=null){s.durationMs=performance.now()-s.startedAt;s.startedAt=null}s.phase='error';s.error=String(msg||'').slice(0,120);render()},ping:pingServer
   };
 })();
 </script>
