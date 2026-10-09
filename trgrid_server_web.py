@@ -20,7 +20,6 @@ import re
 import secrets
 import threading
 import time
-import unicodedata
 import uuid
 from collections import defaultdict, deque
 from datetime import datetime
@@ -56,11 +55,25 @@ RATE_LIMIT_WINDOW = 10 * 60
 RATE_LIMIT_MAX = 8
 RATE_LIMIT = defaultdict(deque)
 RATE_LOCK = threading.Lock()
+RATE_CLEANUP_AT = 0.0
 
 # Progress verisi kısa süreli tutulur; kimlik bilgisi içermez.
 PROGRESS = {}
 PROGRESS_TTL = 30 * 60
 PROGRESS_LOCK = threading.Lock()
+START_TIME = time.time()
+STATS = {"active": 0}
+STATS_LOCK = threading.Lock()
+
+
+def bump_active(n):
+    with STATS_LOCK:
+        STATS["active"] = max(0, STATS["active"] + n)
+
+
+class EpiasAuthError(RuntimeError):
+    """EPİAŞ CAS kimlik doğrulamasının reddedilmesi."""
+
 
 # Varsayılan davranış: yalnızca aynı origin.
 # Örn. öğretim üyesinin blogundan iframe/fetch yapılacaksa:
@@ -130,8 +143,18 @@ def get_client_ip(handler):
 
 
 def rate_limit_ok(ip):
+    global RATE_CLEANUP_AT
     now = time.time()
     with RATE_LOCK:
+        # Periyodik temizlik: artık aktif olmayan IP kuyrukları bellekte birikmesin.
+        if now - RATE_CLEANUP_AT >= 60:
+            for key, queue in list(RATE_LIMIT.items()):
+                while queue and now - queue[0] > RATE_LIMIT_WINDOW:
+                    queue.popleft()
+                if not queue:
+                    RATE_LIMIT.pop(key, None)
+            RATE_CLEANUP_AT = now
+
         q = RATE_LIMIT[ip]
         while q and now - q[0] > RATE_LIMIT_WINDOW:
             q.popleft()
@@ -228,6 +251,9 @@ def get_tgt(username, password):
         },
         timeout=(15, 30),
     )
+    if response.status_code in (400, 401):
+        # CAS bu durum kodlarını kimlik doğrulama reddi için döndürebilir.
+        raise EpiasAuthError("EPİAŞ e-posta veya şifresi hatalı olabilir. Bilgileri kontrol edip tekrar deneyin.")
     if response.status_code != 201:
         # EPİAŞ'ın hata gövdesini kullanıcıya vermiyoruz.
         raise RuntimeError("EPİAŞ giriş doğrulaması başarısız oldu.")
@@ -359,27 +385,6 @@ def get_national_load(tgt, session):
         return {"value": None}
 
 
-
-_TR_TABLE = str.maketrans("İıŞşĞğÜüÖöÇç", "IiSsGgUuOoCc")
-
-
-def norm_name(value):
-    """Türkçe karakter, büyük/küçük harf, boşluk ve sembollerden bağımsız karşılaştırma anahtarı."""
-    text = unicodedata.normalize("NFKC", str(value or "")).translate(_TR_TABLE).upper()
-    text = unicodedata.normalize("NFD", text)
-    text = "".join(ch for ch in text if not unicodedata.combining(ch))
-    return re.sub(r"[^A-Z0-9]+", "", text)
-
-
-def directory_display_name(plant):
-    """EPİAŞ santral kaydından gösterilecek adı bulur; ad yoksa kaydı düşürmez."""
-    for key in ("name", "powerPlantName", "powerplantName", "shortName", "eic"):
-        value = str(plant.get(key) or "").strip()
-        if value:
-            return value
-    return "Santral #" + str(plant.get("id"))
-
-
 def fetch_epias(username, password, date_str, job_id):
     validate_date(date_str)
     validate_credentials(username, password)
@@ -449,18 +454,11 @@ def fetch_epias(username, password, date_str, job_id):
         plant_names = {}
         plant_ids = {}
 
-        # Üretim satırlarında ad veya ID eksik olabilir. Tam santral listesini (plants)
-        # referans alarak eksik alanı tamamlıyoruz; böylece satır düşmez ve aynı santral
-        # "id:" / "name:" diye ikiye bölünmez.
-        dir_name_by_id = {}
-        dir_ids_by_norm = defaultdict(set)
-        for plant in plants:
-            pid = str(plant.get("id")).strip()
-            dname = directory_display_name(plant)
-            dir_name_by_id[pid] = dname
-            dir_ids_by_norm[norm_name(dname)].add(pid)
-
         for row in all_rows:
+            name = str(row.get("powerPlantName") or "").strip()
+            if not name:
+                continue
+
             raw_id = (
                 row.get("powerPlantId")
                 or row.get("powerplantId")
@@ -468,20 +466,7 @@ def fetch_epias(username, password, date_str, job_id):
                 or row.get("id")
             )
             plant_id = str(raw_id).strip() if raw_id not in (None, "") else ""
-            name = str(row.get("powerPlantName") or "").strip()
-
-            if not name and plant_id:
-                name = dir_name_by_id.get(plant_id, "")
-            if not name:
-                continue
-
-            # ID yoksa, yalnızca adı dizinde TEK bir santrale karşılık geliyorsa ID'yi tamamla.
-            if not plant_id:
-                candidates = dir_ids_by_norm.get(norm_name(name), set())
-                if len(candidates) == 1:
-                    plant_id = next(iter(candidates))
-
-            key = "id:" + plant_id if plant_id else "name:" + norm_name(name)
+            key = "id:" + plant_id if plant_id else "name:" + name.casefold()
 
             hour = row.get("hour")
             try:
@@ -533,15 +518,25 @@ def fetch_epias(username, password, date_str, job_id):
         # Böylece 0 MWh üreten tesisler de aranabilir. Hassas bilgi içermez.
         plant_directory = []
         for plant in plants:
-            # EPİAŞ'ın döndürdüğü tüm sade (skaler) alanları aktar: il, ilçe, tip, koordinat,
-            # kurulu güç, EIC, kısa ad vb. hangi isimle gelirse gelsin kaybolmasın.
-            item = {
-                k: v for k, v in plant.items()
-                if isinstance(v, (str, int, float, bool)) and v != ""
-            }
-            item["id"] = plant.get("id")
-            item["name"] = directory_display_name(plant)
-            item["hasGeneration"] = ("id:" + str(plant.get("id")).strip()) in aggregate
+            name = str(
+                plant.get("name")
+                or plant.get("powerPlantName")
+                or plant.get("powerplantName")
+                or ""
+            ).strip()
+            if not name:
+                continue
+
+            item = {"id": plant.get("id"), "name": name}
+            for key in (
+                "city", "cityName", "province", "provinceName", "il", "ilAdi",
+                "locationCity", "district", "districtName",
+                "latitude", "longitude", "lat", "lon", "lng",
+                "powerPlantType", "powerplantType", "type"
+            ):
+                value = plant.get(key)
+                if value not in (None, ""):
+                    item[key] = value
             plant_directory.append(item)
 
         set_progress(
@@ -581,11 +576,12 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "SantralMatik/1.0"
     sys_version = ""
 
-    def _headers(self, content_type=None):
+    def _headers(self, content_type=None, cache="no-store, no-cache, must-revalidate, max-age=0"):
         if content_type:
             self.send_header("Content-Type", content_type)
-        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-        self.send_header("Pragma", "no-cache")
+        self.send_header("Cache-Control", cache)
+        if cache.startswith("no-store"):
+            self.send_header("Pragma", "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "SAMEORIGIN")
         self.send_header("Referrer-Policy", "no-referrer")
@@ -640,6 +636,7 @@ class Handler(BaseHTTPRequestHandler):
         job_id = None
         username = None
         password = None
+        bump_active(1)
 
         try:
             data = safe_json_load(self)
@@ -662,12 +659,19 @@ class Handler(BaseHTTPRequestHandler):
                 set_progress(job_id, 0, "İşlem başlatılamadı.", "Gönderilen bilgiler geçersiz.")
             return self._error(400, str(exc))
 
+        except EpiasAuthError as exc:
+            if job_id:
+                set_progress(job_id, 0, "Kimlik doğrulanamadı.", "EPİAŞ e-posta veya şifresi kontrol edilmeli.")
+            return self._error(401, str(exc))
+
         except requests.RequestException:
             if job_id:
                 set_progress(job_id, 0, "EPİAŞ bağlantısı kurulamadı.", "EPİAŞ sunucusuna ulaşılamadı.")
             return self._error(502, "EPİAŞ sunucusuna şu anda ulaşılamıyor.")
 
-        except Exception:
+        except Exception as exc:
+            # Kullanıcı verisi veya istek gövdesi yazmadan yalnızca hata türünü sunucu günlüğüne bırak.
+            print(type(exc).__name__)
             # Gerçek exception mesajını kullanıcıya göndermiyoruz. Böylece sunucu,
             # kütüphane, uzak API veya yapılandırma ayrıntısı sızdırmaz.
             if job_id:
@@ -677,6 +681,7 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             username = None
             password = None
+            bump_active(-1)
             JOB_SEMAPHORE.release()
             gc.collect()
 
@@ -685,7 +690,26 @@ class Handler(BaseHTTPRequestHandler):
         path = parsed.path
 
         if path == "/health":
-            return self._json({"status": "ok", "service": "SantralMatik"})
+            with STATS_LOCK:
+                active_jobs = STATS["active"]
+            return self._json({
+                "status": "ok", "service": "SantralMatik",
+                "uptime": int(time.time() - START_TIME),
+                "activeJobs": active_jobs, "maxJobs": MAX_CONCURRENT_JOBS,
+            })
+
+        if path == "/santralmatik-logo.png":
+            logo_file = HERE / "santralmatik-logo.png"
+            try:
+                body = logo_file.read_bytes()
+            except OSError:
+                return self._error(404, "Logo bulunamadı.")
+            self.send_response(200)
+            self._headers("image/png", cache="public, max-age=86400")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
 
         if path == "/api/epias-progress":
             if not self._origin_ok():
