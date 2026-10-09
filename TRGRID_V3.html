@@ -1572,20 +1572,47 @@ function filterSearch(e) {
     for (const key of keys) if (obj && obj[key] !== undefined && obj[key] !== null && String(obj[key]).trim()) return String(obj[key]).trim();
     return '';
   };
-  // EPİAŞ üretim kayıtlarını önce santral ID'siyle eşleştir; isimler platformlar
-  // arasında kısaltma/ünvan farkı taşıyabildiği için yalnızca ada güvenme.
-  const idKey = obj => getFirst(obj, ['powerPlantId', 'powerplantId', 'plantId', 'id', 'powerPlantID']);
+  // Bu arama fonksiyonu ayrı bir kapsamda çalıştığı için EPİAŞ köprüsünün
+  // IIFE içindeki norm/findEpiasPlant/ensure24 yardımcılarına bağımlı olmamalı.
+  const searchNorm = value => normalizeTR(String(value || '')).replace(/[^a-z0-9]/g, '');
+  const idKey = obj => getFirst(obj, ['powerPlantId', 'powerplantId', 'plantId', 'powerPlantID', 'plantID', 'id']);
   const generationById = new Map();
   generation.forEach(item => { const id = idKey(item); if (id) generationById.set(id, item); });
   const generationByName = new Map();
-  generation.forEach(item => { const key = norm(item.name || item.powerPlantName || ''); if (key && !generationByName.has(key)) generationByName.set(key, item); });
+  generation.forEach(item => {
+    const key = searchNorm(item.name || item.powerPlantName || item.powerplantName || '');
+    if (key && !generationByName.has(key)) generationByName.set(key, item);
+  });
+  const toHourly24 = values => {
+    const arr = Array.isArray(values) ? values.slice(0, 24).map(cleanVal) : [];
+    while (arr.length < 24) arr.push(0);
+    return arr;
+  };
   const findGenerationForDirectoryEntry = entry => {
     const id = idKey(entry);
     if (id && generationById.has(id)) return generationById.get(id);
     const name = getFirst(entry, ['name', 'powerPlantName', 'powerplantName']);
-    const exact = generationByName.get(norm(name));
-    if (exact) return exact;
-    return typeof findEpiasPlant === 'function' ? findEpiasPlant(generationByName, name) : null;
+    const key = searchNorm(name);
+    if (!key) return null;
+    if (generationByName.has(key)) return generationByName.get(key);
+    // Güvenli, yerel yaklaşık eşleşme: yalnızca uzun ortak isimlerde kullan.
+    let best = null, bestScore = 0;
+    for (const [candidateKey, item] of generationByName) {
+      if (candidateKey.length < 7 || key.length < 7) continue;
+      let score = 0;
+      if (candidateKey.includes(key) || key.includes(candidateKey)) score = 0.94;
+      else {
+        const a = new Set(key.match(/[a-z0-9]{3,}/g) || []);
+        const b = new Set(candidateKey.match(/[a-z0-9]{3,}/g) || []);
+        if (a.size && b.size) {
+          let common = 0;
+          a.forEach(token => { if (b.has(token)) common++; });
+          score = common / Math.max(a.size, b.size);
+        }
+      }
+      if (score > bestScore) { bestScore = score; best = item; }
+    }
+    return bestScore >= 0.72 ? best : null;
   };
   const typeFromDirectory = value => {
     const t = normalizeTR(value);
@@ -1622,7 +1649,7 @@ function filterSearch(e) {
       const existing = plantMatches.find(item => keyFor(item.city?.n, item.plant?.p) === dedupeKey);
       if (existing && gen) {
         existing.plant.v = cleanVal(gen.dailyTotal);
-        existing.plant.hourly = ensure24(gen.hourly);
+        existing.plant.hourly = toHourly24(gen.hourly);
         existing.plant.epiasName = gen.name || name;
         existing.plant.epiasId = idKey(entry) || existing.plant.epiasId || null;
         existing.plant.dataStatus = 'matched';
@@ -1643,7 +1670,7 @@ function filterSearch(e) {
       p: name,
       k: typeFromDirectory(getFirst(entry, ['powerPlantType', 'powerplantType', 'type'])) || 'unknown',
       v: gen ? cleanVal(gen.dailyTotal) : 0,
-      hourly: gen ? ensure24(gen.hourly) : Array(24).fill(0),
+      hourly: gen ? toHourly24(gen.hourly) : Array(24).fill(0),
       epiasName: gen?.name || name,
       epiasId: idKey(entry) || null,
       dataStatus: gen ? 'matched' : 'no-generation-record'
