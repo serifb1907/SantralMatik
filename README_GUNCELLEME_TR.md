@@ -1,19 +1,17 @@
-# SantralMatik durum kartı güncellemesi
+# SantralMatik güncellemesi
 
-Paket içeriği:
-- `TRGRID_V3.html`: Durum kartı tüm ekranlarda görünür; sunucu kontrolü hata ayrıntısını daha anlaşılır gösterir.
-- `trgrid_server_web.py`: `/health` uç noktası ve statik logo servisi.
-- `santralmatik-logo.png`: Ortak logo dosyası.
+Bu pakette şu dosyalar bulunur:
+- `TRGRID_V3.html`
+- `trgrid_server_web.py`
+- `santralmatik-logo.png`
 
 ## Kurulum
 1. Bu üç dosyayı GitHub deposunda aynı klasöre yükleyin/değiştirin.
-2. `trgrid_server_web.py` ve `TRGRID_V3.html` aynı klasörde kalmalı; logo da aynı klasörde bulunmalı.
-3. Commit edin ve Render dağıtımının tamamlanmasını bekleyin.
-4. Bilgisayarda siteyi `Ctrl+F5` ile yenileyin.
-5. Aynı tarayıcıda `https://SİTENİZ/health` adresini açın. `{"status":"ok"...}` benzeri JSON yanıtı gelirse sunucu sağlık kontrolü çalışıyordur.
+2. Commit edin ve Render dağıtımının bitmesini bekleyin.
+3. Siteyi bilgisayarda `Ctrl+F5` ile yenileyin.
+4. Sunucu durumunu test etmek için sitenin sonuna `/api/status` ekleyin. JSON içinde `"status":"ok"` görülmelidir.
 
-## Durum satırı
-- `182 ms`: Uygulama sunucusunun sağlık kontrolüne yanıt süresi.
-- `0/3 iş`: Şu anda çalışan istek sayısı / izin verilen eşzamanlı iş kapasitesi.
-- `HTTP 404` gibi bir değer: Sunucunun sağlık kontrolüne verdiği HTTP yanıt kodu.
-- `KONTROL EDİLEMEDİ` veya `YANIT GECİKTİ`: Tarayıcı sağlık kontrolünü alamamıştır; bu tek başına EPİAŞ bağlantısının bozuk olduğunu göstermez.
+## Yapılan değişiklikler
+- İşlem süresi duvar saati (`Date.now`) ile ölçülür; yükleme sırasında her saniye güncellenir ve işlem bitince gerçek toplam sürede sabitlenir.
+- Durum kartı sunucu kontrolünde `/health` yerine `/api/status` kullanır. Sunucu eski `/health` adresini de desteklemeye devam eder.
+- Diğer uygulama davranışları mümkün olduğunca korunmuştur.

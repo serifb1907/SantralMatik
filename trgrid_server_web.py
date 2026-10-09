@@ -689,7 +689,9 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        if path == "/health":
+        if path in ("/api/status", "/health"):
+            # /api/status, bazı tarayıcı eklentilerinin /health yollarını filtrelemesine
+            # karşı ana durum kartının kullandığı daha belirgin bir uç noktadır.
             with STATS_LOCK:
                 active_jobs = STATS["active"]
             return self._json({
