@@ -2203,7 +2203,48 @@ window.EpiasStatus = (() => {
     let note={idle:'EPİAŞ bağlantısı kurulduğunda veriler burada izlenir.',loading:`${trDate(s.pending)} • ${s.stage||'Bağlanılıyor...'}`,ok:'Veriler güncel.',aging:'Veriler bir süredir yenilenmedi.',stale:'Veriler eskidi. Tarihi yeniden seçerek yenileyin.',error:s.error||'EPİAŞ verileri alınamadı.'}[v];
     if(v==='error'&&s.syncedAt)note+=` Son başarılı senkron: ${clock(s.syncedAt)}.`;put('esNote',note);
   }
-  async function pingServer(){const el=$('esServer');if(!el)return;const t0=performance.now();try{const r=await fetch('/health',{cache:'no-store'});if(!r.ok){el.dataset.h='down';el.textContent=`HTTP ${r.status}`;el.title='Sunucu sağlık kontrolü /health isteğine bu HTTP yanıtını verdi.';return}const h=await r.json();if(h.status!=='ok')throw new Error('Beklenmeyen sağlık yanıtı');const ms=Math.round(performance.now()-t0);el.dataset.h=ms>1500?'slow':'ok';const jobs=h.activeJobs!=null&&h.maxJobs?` · ${h.activeJobs}/${h.maxJobs} iş`:'';el.textContent=`${ms} ms${jobs}`;el.title='SantralMatik sunucusunun /health uç noktası yanıt veriyor.'}catch(_){el.dataset.h='down';el.textContent='API YANIT YOK';el.title='SantralMatik sunucusundaki /health uç noktasına ulaşılamadı. Eski Python dosyası dağıtılmış, servis durmuş veya bağlantı başarısız olabilir.'}}
+  let healthCheckRunning = false;
+  async function pingServer(){
+    const el=$('esServer');
+    if(!el || healthCheckRunning) return;
+    healthCheckRunning = true;
+    const t0=performance.now();
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), 7000) : null;
+    try {
+      // Aynı site üzerindeki Render sunucusunu kontrol eder; EPİAŞ'a istek göndermez.
+      const url = new URL('/health', window.location.origin);
+      url.searchParams.set('_', String(Date.now()));
+      const r=await fetch(url.toString(), {cache:'no-store', credentials:'same-origin', signal:controller ? controller.signal : undefined});
+      if(!r.ok) {
+        el.dataset.h='down';
+        el.textContent=`HTTP ${r.status}`;
+        el.title=`SantralMatik sunucusu /health kontrolüne HTTP ${r.status} yanıtı verdi. Bu, EPİAŞ bağlantı hatası değildir.`;
+        return;
+      }
+      let h;
+      try { h=await r.json(); }
+      catch (_) { throw new Error('Sunucu yanıtı JSON biçiminde değil'); }
+      if(!h || h.status!=='ok') throw new Error('Sağlık yanıtı beklenen biçimde değil');
+      const ms=Math.round(performance.now()-t0);
+      el.dataset.h=ms>1500?'slow':'ok';
+      const jobs=(Number.isFinite(Number(h.activeJobs)) && Number.isFinite(Number(h.maxJobs))) ? ` · ${h.activeJobs}/${h.maxJobs} iş` : '';
+      el.textContent=`${ms} ms${jobs}`;
+      el.title=`SantralMatik sunucusu çalışıyor. Yanıt süresi ${ms} ms. ${h.activeJobs ?? '?'} iş çalışıyor, kapasite ${h.maxJobs ?? '?'} iş. Bu kontrol EPİAŞ verilerini değil, uygulama sunucusunu ölçer.`;
+    } catch (err) {
+      el.dataset.h='down';
+      if (err && err.name==='AbortError') {
+        el.textContent='YANIT GECİKTİ';
+        el.title='SantralMatik sunucusunun /health kontrolü 7 saniyede yanıt vermedi. Sayfa eski sürümde kalmış veya ağ bağlantısı yavaş olabilir.';
+      } else {
+        el.textContent='KONTROL EDİLEMEDİ';
+        el.title=`SantralMatik sunucu kontrolü başarısız oldu: ${err && err.message ? err.message : 'bağlantı hatası'}. Bu ifade EPİAŞ'ın kapalı olduğu anlamına gelmez.`;
+      }
+    } finally {
+      if(timeout) clearTimeout(timeout);
+      healthCheckRunning = false;
+    }
+  }
   const head=$('esHead');const setCollapsed=c=>{root.classList.toggle('collapsed',c);head.setAttribute('aria-expanded',String(!c))};
   const toggle=()=>{const c=!root.classList.contains('collapsed');setCollapsed(c);try{localStorage.setItem('esCollapsed',c?'1':'0')}catch(_){}};
   head.addEventListener('click',toggle);head.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});

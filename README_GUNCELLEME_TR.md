@@ -1,25 +1,19 @@
-# SantralMatik güncellemesi
+# SantralMatik durum kartı güncellemesi
 
-Bu paket üç dosyadan oluşur:
+Paket içeriği:
+- `TRGRID_V3.html`: Durum kartı tüm ekranlarda görünür; sunucu kontrolü hata ayrıntısını daha anlaşılır gösterir.
+- `trgrid_server_web.py`: `/health` uç noktası ve statik logo servisi.
+- `santralmatik-logo.png`: Ortak logo dosyası.
 
-- `TRGRID_V3.html`: Yeni EPİAŞ durum kartı, bağlantı/ilerleme/hata göstergeleri ve küçültülmüş HTML.
-- `trgrid_server_web.py`: `/health` ayrıntıları, logo için önbellekli statik rota, EPİAŞ kimlik doğrulama hatası ve oran sınırlama belleği temizliği.
-- `santralmatik-logo.png`: HTML içindeki üç gömülü kopya yerine kullanılan ortak logo dosyası.
+## Kurulum
+1. Bu üç dosyayı GitHub deposunda aynı klasöre yükleyin/değiştirin.
+2. `trgrid_server_web.py` ve `TRGRID_V3.html` aynı klasörde kalmalı; logo da aynı klasörde bulunmalı.
+3. Commit edin ve Render dağıtımının tamamlanmasını bekleyin.
+4. Bilgisayarda siteyi `Ctrl+F5` ile yenileyin.
+5. Aynı tarayıcıda `https://SİTENİZ/health` adresini açın. `{"status":"ok"...}` benzeri JSON yanıtı gelirse sunucu sağlık kontrolü çalışıyordur.
 
-## GitHub / Render'a yükleme
-
-1. GitHub deposundaki `TRGRID_V3.html` dosyasını paketteki dosyayla değiştirin.
-2. `trgrid_server_web.py` dosyasını da pakettekiyle değiştirin.
-3. `santralmatik-logo.png` dosyasını `trgrid_server_web.py` ile aynı dizine ekleyin.
-4. Üç dosyayı commit edin ve Render dağıtımının tamamlanmasını bekleyin.
-5. Siteyi açıp `Ctrl + F5` ile önbelleksiz yenileyin.
-6. `/health` adresi `status: ok`, `activeJobs` ve `maxJobs` alanlarını göstermeli; `/santralmatik-logo.png` bir görsel döndürmeli.
-
-Render ayarları değişmiyor: Build Command `pip install -r requirements.txt`, Start Command `python trgrid_server_web.py`.
-
-## Notlar
-
-- Durum kartındaki `KAYIT/EŞLEŞME` satırı, alınan üretim kayıt sayısı ile haritadaki eşleşme sayısını gösterir.
-- `EPİAŞ SAATİ`, yanıtın `nationalLoad.latestUpdateTime` alanı varsa gösterilir; bu alan yoksa `--` görünür.
-- Frekans HUD'u gerçek ölçüm değil, görsel simülasyon olarak açıkça etiketlenir.
-- Bu paket canlı EPİAŞ hesabıyla her santralin her tarih için değerini doğrulamaz. Kod ve yerel sunucu uçları kontrol edilmiştir.
+## Durum satırı
+- `182 ms`: Uygulama sunucusunun sağlık kontrolüne yanıt süresi.
+- `0/3 iş`: Şu anda çalışan istek sayısı / izin verilen eşzamanlı iş kapasitesi.
+- `HTTP 404` gibi bir değer: Sunucunun sağlık kontrolüne verdiği HTTP yanıt kodu.
+- `KONTROL EDİLEMEDİ` veya `YANIT GECİKTİ`: Tarayıcı sağlık kontrolünü alamamıştır; bu tek başına EPİAŞ bağlantısının bozuk olduğunu göstermez.
