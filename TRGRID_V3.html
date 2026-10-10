@@ -976,34 +976,30 @@
     right: 6px !important; left: auto !important; width: 126px !important; max-width: none !important;
     height: 38px; box-sizing: border-box;
     flex-direction: row !important; align-items: center; gap: 0 !important;
-    padding: 0 6px 0 10px !important; border-radius: 10px !important;
-    background: #ffffff !important; border: 1px solid #cbd5e1 !important;
-    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+    padding: 0 6px 0 8px !important; border-radius: 10px !important;
     box-shadow: 0 4px 16px rgba(0,0,0,.45) !important;
   }
-  #mapDatePicker:focus-within { border-color: var(--neon-blue) !important; box-shadow: 0 0 0 2px rgba(0,210,255,.45), 0 4px 16px rgba(0,0,0,.45) !important; }
+  #mapDatePicker:focus-within { border-color: var(--neon-blue); }
   #mapDatePicker label {                     /* ekran okuyucu için kalır, görsel olarak gizli */
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
   }
   #mapDateInput {
     flex: 1 1 auto; min-width: 0; width: 100% !important; height: 100%;
-    background: transparent !important; border: 0 !important; padding: 0 !important; margin: 0 !important;
-    font-size: 13px !important; font-weight: 700; letter-spacing: .2px;
-    color: #0f172a !important; -webkit-text-fill-color: #0f172a; caret-color: #0f172a;
+    background: transparent !important; border: 0 !important; padding: 0 !important;
+    font-size: 12px !important; color: #fff !important; -webkit-text-fill-color: #fff;
     color-scheme: light; box-shadow: none !important; outline: none;
-    -webkit-appearance: none; appearance: none; min-height: 0; line-height: 1;
   }
-  #mapDateInput::-webkit-date-and-time-value { text-align: left; min-height: 0; }
-  #mapDateInput::-webkit-calendar-picker-indicator {   /* beyaz zeminde koyu takvim simgesi */
-    filter: none !important; opacity: .85 !important; width: 18px !important; height: 18px !important;
-    cursor: pointer; margin: 0 !important; padding: 0 !important;
+  /* Sağdaki küçük takvim simgesi: koyu varsayılan simge ters çevrilerek beyaz yapılır */
+  #mapDateInput::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(2) !important; opacity: 1 !important;
+    width: 18px !important; height: 18px !important; cursor: pointer;
   }
-  /* iOS Safari kendi takvim simgesini göstermez: sağa küçük bir simge ekle */
+  /* iOS Safari kendi takvim simgesini göstermez: sağa küçük beyaz bir simge ekle */
   @supports (-webkit-touch-callout: none) {
     #mapDatePicker::after {
       content: ""; position: absolute; right: 8px; top: 50%; width: 16px; height: 16px;
       transform: translateY(-50%); pointer-events: none;
-      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f172a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center / contain no-repeat;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cpath d='M16 2v4M8 2v4M3 10h18'/%3E%3C/svg%3E") center / contain no-repeat;
     }
     #mapDateInput { padding-right: 20px !important; }
   }
