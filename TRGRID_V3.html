@@ -2875,5 +2875,103 @@ window.EpiasStatus = (() => {
 })();
 </script>
 
+<script>
+/* SANTRALMATİK: Geri tuşu / geri hareketi (HTML5 History API)
+   Katmanlar: info (kaynak bilgi kartı) · selection (il / santral listesi) · sim (santral detayı)
+   Uygulama içi butonlar (HARİTAYA GERİ DÖN, LİSTEYE DÖN, ✕) mevcut fonksiyonlarını aynen kullanır;
+   bu kod yalnızca ekrandaki katmanları izleyip tarayıcı geçmişiyle eşitler. */
+(() => {
+  if (!window.history || typeof history.pushState !== 'function') return;
+
+  const byId = id => document.getElementById(id);
+  const isOpen = id => { const e = byId(id); return !!e && getComputedStyle(e).display !== 'none'; };
+
+  // Ekrandaki duruma göre "geçmişte olması gereken" katman listesi
+  function wantedLayers() {
+    const layers = [];
+    if (isOpen('simOverlay')) {
+      const c = (window._simReturnContext || {}).cityIdx;
+      if (Number.isInteger(c) && c >= 0) layers.push('selection'); // detaydan geri → il listesi
+      layers.push('sim');
+    } else if (isOpen('selectionOverlay')) {
+      layers.push('selection');
+    } else if (isOpen('resourceInfoModal')) {
+      layers.push('info');
+    }
+    return layers;
+  }
+
+  // Geri tuşuyla bir katman kapanırken, uygulama içi "geri" butonlarının çağırdığı fonksiyonlar kullanılır
+  const closeLayer = {
+    sim:       () => { if (typeof closeSim === 'function') closeSim(); },
+    selection: () => { if (typeof closeSelection === 'function') closeSelection(); },
+    info:      () => { if (typeof closeResourceInfo === 'function') closeResourceInfo(); }
+  };
+
+  let stack = [];      // geçmişe eklediğimiz katmanlar (taban sayfa hariç)
+  let busy = false;    // history.go() sonucu popstate bekleniyor
+  let busyTimer = null;
+
+  function waitForTraversal() {
+    busy = true;
+    clearTimeout(busyTimer);
+    busyTimer = setTimeout(() => { if (busy) { busy = false; sync(); } }, 900); // güvenlik
+  }
+
+  // Ekran durumunu geçmişe yansıt
+  function sync() {
+    if (busy) return;
+    // Katman açıkken kaynak bilgi kartı kapatılır (kartlar iç içe geçmesin)
+    if ((isOpen('simOverlay') || isOpen('selectionOverlay')) && isOpen('resourceInfoModal')) {
+      if (typeof closeResourceInfo === 'function') closeResourceInfo();
+    }
+    const want = wantedLayers();
+    let common = 0;
+    while (common < stack.length && common < want.length && stack[common] === want[common]) common++;
+
+    const pops = stack.length - common;
+    if (pops > 0) {                       // uygulama içinden geri dönüldü → geçmişten de çıkar
+      stack = stack.slice(0, common);
+      waitForTraversal();
+      history.go(-pops);                  // popstate gelince sync() tekrar çalışır
+      return;
+    }
+    for (let i = common; i < want.length; i++) {   // yeni katman açıldı → geçmişe ekle
+      stack.push(want[i]);
+      history.pushState({ sm: 1, d: stack.length }, '');
+    }
+  }
+
+  window.addEventListener('popstate', e => {
+    const n = e.state && e.state.sm ? e.state.d : 0;
+
+    if (busy) {                           // kendi başlattığımız history.go() tamamlandı
+      busy = false; clearTimeout(busyTimer);
+      sync();
+      return;
+    }
+    if (n < stack.length) {               // kullanıcı telefonun geri tuşuna / hareketine bastı
+      while (stack.length > n) closeLayer[stack.pop()]();
+      sync();
+    } else if (n > stack.length) {        // ileri tuşu: o ekranı yeniden kuramayız, geri al
+      waitForTraversal();
+      history.go(stack.length - n);
+    }
+  });
+
+  // Sayfa yenilense bile taban kayıt temiz başlasın
+  try { history.replaceState({ sm: 1, d: 0 }, ''); } catch (_) {}
+
+  if (window.MutationObserver) {
+    const mo = new MutationObserver(sync);
+    ['simOverlay', 'selectionOverlay', 'resourceInfoModal'].forEach(id => {
+      const el = byId(id);
+      if (el) mo.observe(el, { attributes: true, attributeFilter: ['style', 'class'] });
+    });
+  }
+  sync();
+})();
+</script>
+
 </body>
 </html>
