@@ -917,7 +917,71 @@
 </head>
 <body>
 
-<!-- CANLI ŞEBEKE TELEMETRİSİ -->
+<!-- CANLI ŞEBEKE
+
+/* MOBİL SON DÜZEN: daha kompakt HUD ve arama alanı; masaüstünü etkilemez */
+@media (max-width: 768px) {
+  #scadaHUD {
+    top: 6px !important;
+    left: 6px !important;
+    right: 6px !important;
+    padding: 6px 8px !important;
+    gap: 4px 10px !important;
+    border-radius: 8px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  #scadaHUD .hud-block { min-width: 0 !important; }
+  #scadaHUD .hud-title {
+    font-size: 7px !important;
+    line-height: 1.15 !important;
+    letter-spacing: .45px !important;
+    margin-bottom: 2px !important;
+  }
+  #scadaHUD .hud-val {
+    font-size: clamp(10px, 2.8vw, 13px) !important;
+    line-height: 1.15 !important;
+    white-space: nowrap !important;
+  }
+  #searchBoxWrapper {
+    top: 105px !important;
+    left: 7px !important;
+    right: 7px !important;
+    width: auto !important;
+    min-height: 38px !important;
+    padding: 5px 8px !important;
+    gap: 5px !important;
+    border-radius: 9px !important;
+    box-sizing: border-box !important;
+  }
+  #searchBoxWrapper > span {
+    margin-right: 2px !important;
+    font-size: 12px !important;
+    flex: 0 0 auto !important;
+  }
+  #citySearchInput {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    padding: 3px 0 !important;
+  }
+  #clearCitySearch { flex: 0 0 22px !important; width: 22px !important; height: 24px !important; }
+  #searchDropdown { top: calc(100% + 5px) !important; max-height: min(34vh, 240px) !important; }
+  #mapDatePicker { top: 153px !important; left: 7px !important; padding: 6px 8px !important; }
+}
+@media (max-width: 430px) {
+  #scadaHUD {
+    top: 5px !important; left: 5px !important; right: 5px !important;
+    padding: 5px 7px !important; gap: 3px 8px !important;
+  }
+  #scadaHUD .hud-title { font-size: 6.5px !important; }
+  #scadaHUD .hud-val { font-size: 10px !important; }
+  #searchBoxWrapper { top: 98px !important; left: 6px !important; right: 6px !important; min-height: 35px !important; padding: 4px 7px !important; }
+  #citySearchInput { font-size: 11px !important; }
+  #mapDatePicker { top: 143px !important; left: 6px !important; }
+}
+
+ TELEMETRİSİ -->
 <div id="scadaHUD">
   <div class="hud-block">
     <div class="hud-title"><span class="hud-dot"></span>ŞEBEKE FREKANSI</div>
