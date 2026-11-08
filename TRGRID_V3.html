@@ -888,7 +888,7 @@
 #epiasStatus[data-state="error"]{--st:#ef4444;--st-rgb:239,68,68}
 .es-head{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
 .es-title{font:700 11px 'Orbitron','JetBrains Mono',sans-serif;letter-spacing:2px;color:#e2e8f0}
-.es-badge{margin-left:auto;padding:2px 8px;border-radius:999px;font-weight:700;font-size:9px;letter-spacing:.8px;color:var(--st);background:rgba(var(--st-rgb),.12);border:1px solid rgba(var(--st-rgb),.45);transition:all .35s}
+.es-badge{margin-left:auto;white-space:nowrap;padding:2px 8px;border-radius:999px;font-weight:700;font-size:9px;letter-spacing:.8px;color:var(--st);background:rgba(var(--st-rgb),.12);border:1px solid rgba(var(--st-rgb),.45);transition:all .35s}
 .es-chev{color:#64748b;font-size:11px;transition:transform .25s}
 #epiasStatus.collapsed .es-chev{transform:rotate(-90deg)}
 .es-dot{position:relative;flex:none;width:8px;height:8px;border-radius:50%;background:var(--st);box-shadow:0 0 8px var(--st);transition:background .35s}
@@ -1272,7 +1272,15 @@ function cleanVal(v) {
 }
 
 // ARCGIS UYDU GÖRÜNTÜSÜ
-const map = L.map('map', { zoomControl:false }).setView([39.1, 35.3], 6);
+const IS_COMPACT_SCREEN = () => window.innerWidth <= 768;
+const map = L.map('map', {
+  zoomControl:false,
+  // Mobilde ince ölçekli yakınlaştırma: tüm Türkiye ekrana tam sığabilsin.
+  zoomSnap: IS_COMPACT_SCREEN() ? 0.25 : 1,
+  zoomDelta: 1,
+  tap: true,
+  tapTolerance: 18
+}).setView([39.1, 35.3], 6);
 L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{ maxZoom:19 }).addTo(map);
 
 const typeCfg = {
@@ -1588,7 +1596,7 @@ function renderMapMarkers() {
   cityMarkers = [];
 
   const zoom = map.getZoom();
-  const zoomScale = zoom / 6;
+  const zoomScale = Math.max(0.8, zoom / 6);
 
   const displayList = allCities.map((city, idx) => {
     const filterVal = getCityFilteredValue(city, activeFilter);
@@ -1636,6 +1644,43 @@ map.on('zoomend', () => {
   renderMapMarkers();
 });
 
+// MOBİL: Tüm illeri ekrana sığdır. Masaüstünde (tüm iller zaten sığıyorsa) eski görünüm korunur.
+let mapUserMoved = false;
+function fitAllCities(force) {
+  if (!allCities.length) return;
+  map.invalidateSize({ animate:false });
+  const size = map.getSize();
+  if (!size.x || !size.y) return;
+  const bounds = L.latLngBounds(allCities.map(c => c.c));
+  const compact = IS_COMPACT_SCREEN();
+  // Üstte HUD + arama + durum hapı, altta kaynak filtreleri + lejand boşluğu bırakılır.
+  const padTL = compact ? L.point(14, 138) : L.point(30, 30);
+  const padBR = compact ? L.point(14, 104) : L.point(30, 30);
+  const fitZoom = map.getBoundsZoom(bounds, false, padTL.add(padBR));
+  const DEFAULT_ZOOM = 6;
+  if (fitZoom < DEFAULT_ZOOM) {
+    // Ekran Türkiye'yi 6. yakınlaştırmada gösteremeyecek kadar dar: sığdır.
+    map.fitBounds(bounds, { paddingTopLeft: padTL, paddingBottomRight: padBR, animate:false, maxZoom: DEFAULT_ZOOM });
+  } else if (force || !mapUserMoved) {
+    map.setView([39.1, 35.3], DEFAULT_ZOOM, { animate:false });
+  }
+}
+map.on('dragstart', () => { mapUserMoved = true; });
+let _fitTimer = null;
+function scheduleMapRefit() {
+  clearTimeout(_fitTimer);
+  _fitTimer = setTimeout(() => {
+    map.invalidateSize({ animate:false });
+    if (!mapUserMoved) fitAllCities(false);
+    else renderMapMarkers();
+  }, 180);
+}
+window.addEventListener('resize', scheduleMapRefit);
+window.addEventListener('orientationchange', scheduleMapRefit);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', scheduleMapRefit);
+window.addEventListener('load', () => { map.invalidateSize({ animate:false }); if (!mapUserMoved) fitAllCities(false); });
+
+fitAllCities(true);
 renderMapMarkers();
 
 function setResourceFilter(grp) {
@@ -2337,7 +2382,7 @@ setInterval(() => {
 <div id="epiasStatus" data-state="idle">
   <div class="es-head" id="esHead" role="button" tabindex="0" aria-expanded="true" title="Daralt / genişlet">
     <span class="es-dot"></span><span class="es-title">EPİAŞ</span>
-    <span class="es-badge" id="esBadge" aria-live="polite">BEKLENİYOR</span>
+    <span class="es-badge" id="esBadge" aria-live="polite">HAZIR</span>
     <span class="es-chev" aria-hidden="true">▾</span>
   </div>
   <div class="es-meter"><i id="esMeter"></i></div>
@@ -2355,15 +2400,17 @@ window.EpiasStatus = (() => {
   const $ = id => document.getElementById(id);
   const root = $('epiasStatus');
   if (!root) return { loading(){}, progress(){}, success(){}, error(){}, ping(){} };
-  const FRESH_MS = 10 * 60 * 1000, STALE_MS = 30 * 60 * 1000;
-  const LABELS = {idle:'BEKLENİYOR',loading:'SORGULANIYOR',ok:'BAĞLI',aging:'ESKİYOR',stale:'ESKİ VERİ',error:'HATA'};
+  const STALE_MS = 30 * 60 * 1000;          // Veri geçerlilik eşiği
+  const NOTICE_RATIO = 0.70;                 // Uyarı, eşiğin %70'i dolunca başlar (21 dk)
+  const NOTICE_MS = STALE_MS * NOTICE_RATIO;
+  const LABELS = {idle:'HAZIR',loading:'SORGULANIYOR',ok:'GÜNCEL',aging:'YENİLEME ÖNERİLİR',stale:'YENİLEME GEREKLİ',error:'BAĞLANTI HATASI'};
   const s = {phase:'idle',pending:null,stage:'',startedAt:null,syncedAt:null,dataDate:null,sourceTime:null,durationMs:null,records:null,matched:null,error:''};
   const trDate = d => {const p=String(d||'').split('-');return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:'--'};
   const clock = ms => new Date(ms).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   const ago = ms => {const sec=Math.max(0,Math.round(ms/1000));if(sec<5)return 'şimdi';if(sec<60)return `${sec} sn önce`;const m=Math.floor(sec/60);return m<60?`${m} dk önce`:`${Math.floor(m/60)} sa ${m%60} dk önce`};
   const srcTime = v => {if(!v)return '--';const d=new Date(v);return isNaN(d)?String(v).slice(0,16):d.toLocaleString('tr-TR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})};
   const put = (id,text,title) => {const e=$(id);if(!e)return;e.textContent=text;if(title!==undefined)e.title=title};
-  function view(){if(s.phase!=='ok'||!s.syncedAt)return s.phase;const age=Date.now()-s.syncedAt;return age>STALE_MS?'stale':age>FRESH_MS?'aging':'ok'}
+  function view(){if(s.phase!=='ok'||!s.syncedAt)return s.phase;const age=Date.now()-s.syncedAt;return age>=STALE_MS?'stale':age>=NOTICE_MS?'aging':'ok'}
   function render(){
     const v=view();root.dataset.state=v;put('esBadge',LABELS[v]||LABELS.idle);put('esDate',trDate(s.dataDate));
     put('esSync',s.syncedAt?ago(Date.now()-s.syncedAt):'--',s.syncedAt?new Date(s.syncedAt).toLocaleString('tr-TR'):'');
@@ -2372,7 +2419,7 @@ window.EpiasStatus = (() => {
     put('esDuration',elapsedMs!=null?(elapsedMs/1000).toFixed(1)+' sn':'--',v==='loading'?'Devam eden veri çekme işleminin geçen süresi':'Son tamamlanan veri çekme işleminin süresi');
     put('esRecords',s.records!=null?`${s.records} / ${s.matched}`:'--');
     const meter=$('esMeter');if(meter&&v!=='loading'){meter.classList.remove('indet');const f=s.syncedAt?Math.max(0,1-(Date.now()-s.syncedAt)/STALE_MS):0;meter.style.width=(v==='error'?100:f*100).toFixed(1)+'%'}
-    let note={idle:'EPİAŞ bağlantısı kurulduğunda veriler burada izlenir.',loading:`${trDate(s.pending)} • ${s.stage||'Bağlanılıyor...'}`,ok:'Veriler güncel.',aging:'Veriler bir süredir yenilenmedi.',stale:'Veriler eskidi. Tarihi yeniden seçerek yenileyin.',error:s.error||'EPİAŞ verileri alınamadı.'}[v];
+    let note={idle:'EPİAŞ bağlantısı kurulduğunda veriler burada izlenir.',loading:`${trDate(s.pending)} • ${s.stage||'Bağlanılıyor...'}`,ok:'Veriler güncel.',aging:'Son güncellemeden bu yana süre doldu. Verileri yenilemeniz önerilir.',stale:'Veri güncelliği doğrulanamıyor. Tarihi yeniden seçerek verileri yenileyin.',error:s.error||'EPİAŞ verilerine ulaşılamadı.'}[v];
     if(v==='error'&&s.syncedAt)note+=` Son başarılı senkron: ${clock(s.syncedAt)}.`;put('esNote',note);
   }
   let healthCheckRunning = false;
